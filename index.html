@@ -117,12 +117,40 @@ tr:hover td{background:var(--bg3);}
 .loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--text3);flex-direction:column;gap:10px;}
 .spinner{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--purple);border-radius:50%;animation:spin .6s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
+.bottom-nav{display:none;}
 @media(max-width:768px){
-  .sidebar{width:52px;}
-  .sb-logo-text,.sb-logo-sub,.sb-sec,.sb-item span,.sb-uname,.sb-urole{display:none;}
-  .sb-item{justify-content:center;padding:10px;}
-  .metrics{grid-template-columns:1fr 1fr;}
+  .sidebar{display:none;}
+  .shell{flex-direction:column;}
+  .main{height:100vh;display:flex;flex-direction:column;}
+  .content{padding:10px 12px;padding-bottom:72px;}
+  .topbar{height:52px;padding:0 14px;}
+  .topbar-title{font-size:15px;}
+  .metrics{grid-template-columns:1fr 1fr;gap:8px;}
   .two-col,.three-col{grid-template-columns:1fr;}
+  .card{overflow-x:auto;}
+  .bottom-nav{
+    display:flex;position:fixed;bottom:0;left:0;right:0;
+    background:var(--bg2);border-top:1px solid var(--border);
+    padding:6px 0 max(10px,env(safe-area-inset-bottom));
+    z-index:200;
+  }
+  .bn-item{
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    gap:3px;font-size:9px;color:var(--text3);cursor:pointer;
+    padding:4px 0;background:none;border:none;font-family:var(--font);
+    position:relative;
+  }
+  .bn-item.active{color:var(--purple);}
+  .bn-item i{font-size:22px;}
+  .bn-dot{width:4px;height:4px;border-radius:50%;background:var(--purple);margin:0 auto;}
+  .bn-badge{
+    position:absolute;top:2px;left:50%;transform:translateX(4px);
+    background:var(--red);color:#fff;font-size:9px;font-weight:600;
+    padding:1px 4px;border-radius:999px;line-height:1.3;
+  }
+  .alert-banner{flex-wrap:wrap;gap:6px;}
+  table{font-size:11px;}
+  th{font-size:10px;}
 }
 </style>
 </head>
@@ -159,6 +187,32 @@ tr:hover td{background:var(--bg3);}
     </div>
   </div>
 </div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="bn-item active" onclick="goTabMobile('overview',this)">
+    <i class="ti ti-layout-dashboard"></i>
+    <span>ภาพรวม</span>
+    <div class="bn-dot"></div>
+  </button>
+  <button class="bn-item" onclick="goTabMobile('inventory',this)">
+    <i class="ti ti-packages"></i>
+    <span>สินค้า</span>
+  </button>
+  <button class="bn-item" onclick="goTabMobile('withdraw',this)">
+    <i class="ti ti-transfer-out"></i>
+    <span>เบิก</span>
+  </button>
+  <button class="bn-item" onclick="goTabMobile('pr',this)">
+    <i class="ti ti-file-invoice"></i>
+    <span>PR</span>
+    <span class="bn-badge" id="bn-badge" style="display:none;">0</span>
+  </button>
+  <button class="bn-item" onclick="goTabMobile('projects',this)">
+    <i class="ti ti-building"></i>
+    <span>โครงการ</span>
+  </button>
+</nav>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -304,7 +358,25 @@ function fmtDate(ts) {
 function renderPRBadge() {
   const open = prList.filter(p => p.status === 'open').length;
   document.getElementById('pr-badge').textContent = open;
+  const bnBadge = document.getElementById('bn-badge');
+  if (bnBadge) {
+    bnBadge.textContent = open;
+    bnBadge.style.display = open > 0 ? '' : 'none';
+  }
 }
+
+window.goTabMobile = function(id, el) {
+  document.querySelectorAll('.bn-item').forEach(b => {
+    b.classList.remove('active');
+    const dot = b.querySelector('.bn-dot');
+    if (dot) dot.style.display = 'none';
+  });
+  el.classList.add('active');
+  const dot = el.querySelector('.bn-dot');
+  if (dot) dot.style.display = '';
+  goTab(id, null);
+  document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+};
 
 function renderOverview() {
   const openPR = prList.filter(p => p.status === 'open').length;
@@ -318,7 +390,7 @@ function renderOverview() {
     <div class="alert-banner">
       <i class="ti ti-alert-triangle" style="font-size:18px;color:#A32D2D;flex-shrink:0;"></i>
       <div style="flex:1;font-size:11px;color:#791F1F;"><strong>สต็อควิกฤต ${critItems.length} รายการ:</strong> ${critItems.map(p=>p.name).join(' · ')}</div>
-      <button onclick="goTab('pr',document.querySelectorAll('.sb-item')[3])" style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid #F09595;background:#fff;color:#A32D2D;cursor:pointer;">ดู PR →</button>
+      <button onclick="goTab('pr',null);if(window.innerWidth<=768){document.querySelectorAll('.bn-item')[3]?.click()}" style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid #F09595;background:#fff;color:#A32D2D;cursor:pointer;">ดู PR →</button>
     </div>` : '';
   const recentLog = withdrawLog.slice(0,3).map(l => `
     <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px;">
