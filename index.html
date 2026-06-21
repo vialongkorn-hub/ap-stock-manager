@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AP Stock Manager</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f8f8f8;--bg2:#ffffff;--bg3:#f2f2f0;
+  --border:#e5e5e3;--border2:#d4d4d0;
+  --text:#1a1a18;--text2:#6b6b68;--text3:#9b9b98;
+  --purple:#534AB7;--purple-light:#EEEDFE;
+  --green:#1D9E75;--green-light:#E1F5EE;
+  --red:#E24B4A;--red-light:#FCEBEB;
+  --amber:#BA7517;--amber-light:#FAEEDA;
+  --radius:8px;--radius-lg:12px;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;}
+.shell{display:flex;height:100vh;overflow:hidden;}
+.sidebar{width:200px;background:#1e1b4b;display:flex;flex-direction:column;flex-shrink:0;}
+.sb-logo{padding:14px;display:flex;align-items:center;gap:9px;border-bottom:1px solid rgba(255,255,255,.08);}
+.sb-logo-box{width:28px;height:28px;background:var(--purple);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;flex-shrink:0;}
+.sb-logo-text{font-size:13px;font-weight:600;color:#fff;}
+.sb-logo-sub{font-size:10px;color:rgba(255,255,255,.4);}
+.sb-sec{padding:10px 12px 3px;font-size:10px;color:rgba(255,255,255,.3);letter-spacing:.06em;text-transform:uppercase;}
+.sb-item{display:flex;align-items:center;gap:8px;padding:8px 11px;margin:1px 8px;border-radius:7px;font-size:12px;color:rgba(255,255,255,.55);cursor:pointer;transition:all .12s;border:none;background:none;width:calc(100% - 16px);text-align:left;}
+.sb-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85);}
+.sb-item.active{background:var(--purple);color:#fff;}
+.sb-item i{font-size:15px;flex-shrink:0;}
+.sb-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:600;padding:1px 5px;border-radius:999px;}
+.sb-bottom{margin-top:auto;padding:10px;border-top:1px solid rgba(255,255,255,.08);}
+.sb-user{display:flex;align-items:center;gap:8px;padding:7px;}
+.sb-avatar{width:28px;height:28px;border-radius:50%;background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0;}
+.sb-uname{font-size:11px;font-weight:500;color:rgba(255,255,255,.8);}
+.sb-urole{font-size:10px;color:rgba(255,255,255,.35);}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{height:44px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;}
+.topbar-title{font-size:14px;font-weight:600;flex:1;}
+.tb-btn{font-size:11px;padding:4px 12px;border-radius:999px;border:1px solid var(--border2);background:none;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:4px;}
+.tb-btn.primary{background:var(--purple);color:#fff;border-color:var(--purple);}
+.content{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px;}
+.content::-webkit-scrollbar{width:4px;}
+.content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;}
+.card-hd{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.two-col{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;}
+.metric-lbl{font-size:11px;color:var(--text2);margin-bottom:5px;display:flex;align-items:center;gap:4px;}
+.metric-val{font-size:24px;font-weight:700;}
+.metric-sub{font-size:10px;color:var(--text3);margin-top:2px;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{text-align:left;font-size:10px;font-weight:600;color:var(--text2);padding:5px 10px 7px;border-bottom:1px solid var(--border);}
+td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--bg3);}
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;}
+.b-pleno{background:#E6F1FB;color:#0C447C;}
+.b-grande{background:#EEEDFE;color:#3C3489;}
+.b-bkm{background:#E1F5EE;color:#085041;}
+.b-bkme{background:#FAEEDA;color:#633806;}
+.b-bkmc{background:#FAECE7;color:#712B13;}
+.b-api{background:#EAF3DE;color:#27500A;}
+.b-dist{background:#F1EFE8;color:#444441;}
+.b-ok{background:#EAF3DE;color:#27500A;}
+.b-low{background:#FAEEDA;color:#633806;}
+.b-crit{background:#FCEBEB;color:#791F1F;}
+.b-pr-open{background:#FAEEDA;color:#633806;}
+.b-pr-wait{background:#E6F1FB;color:#0C447C;}
+.b-pr-done{background:#EAF3DE;color:#27500A;}
+.alert-banner{background:#FCEBEB;border:1px solid #F09595;border-radius:var(--radius);padding:10px 14px;display:flex;align-items:center;gap:10px;}
+.ai-box{background:var(--purple-light);border-radius:var(--radius);padding:11px 13px;}
+.ai-lbl{font-size:10px;font-weight:600;color:#3C3489;margin-bottom:4px;display:flex;align-items:center;gap:4px;}
+.ai-txt{font-size:11px;color:var(--purple);line-height:1.6;}
+.chip-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.chip{font-size:11px;padding:3px 12px;border-radius:999px;border:1px solid var(--border2);background:none;color:var(--text2);cursor:pointer;}
+.chip.active{background:var(--purple);color:#fff;border-color:var(--purple);}
+.toggle-group{display:flex;background:var(--bg3);border-radius:999px;padding:2px;gap:2px;}
+.toggle-btn{font-size:11px;padding:3px 12px;border-radius:999px;border:none;background:none;color:var(--text2);cursor:pointer;}
+.toggle-btn.active{background:var(--bg2);color:var(--text);font-weight:600;box-shadow:0 0 0 1px var(--border);}
+.chart-wrap{height:120px;display:flex;align-items:flex-end;gap:6px;padding-top:10px;}
+.bar-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;}
+.bar{border-radius:3px 3px 0 0;width:100%;}
+.bar-lbl{font-size:9px;color:var(--text3);text-align:center;}
+.bar-val{font-size:9px;color:var(--text2);}
+.form-group{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;}
+.form-label{font-size:11px;font-weight:600;color:var(--text2);}
+.form-input,.form-select{height:32px;border:1px solid var(--border2);border-radius:var(--radius);padding:0 10px;font-size:12px;background:var(--bg2);color:var(--text);width:100%;font-family:var(--font);}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--purple);}
+.qty-input{width:64px;height:26px;border:1px solid var(--border2);border-radius:5px;padding:0 8px;font-size:11px;text-align:center;font-family:var(--font);}
+.qty-input:focus{outline:none;border-color:var(--purple);}
+.edit-btn{font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid var(--border2);background:none;color:var(--text2);cursor:pointer;}
+.save-btn{font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid var(--purple);background:var(--purple);color:#fff;cursor:pointer;}
+.del-btn{width:24px;height:24px;border-radius:5px;border:1px solid var(--border2);background:none;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.del-btn:hover{background:#FCEBEB;color:#A32D2D;border-color:#F09595;}
+.search-wrap{position:relative;}
+.search-input{height:32px;width:100%;border:1px solid var(--border2);border-radius:var(--radius);padding:0 10px 0 32px;font-size:12px;background:var(--bg2);color:var(--text);font-family:var(--font);}
+.search-input:focus{outline:none;border-color:var(--purple);}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--text3);pointer-events:none;}
+.search-dropdown{position:absolute;top:34px;left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);z-index:100;max-height:180px;overflow-y:auto;display:none;box-shadow:0 4px 16px rgba(0,0,0,.08);}
+.search-dropdown.open{display:block;}
+.search-item{padding:8px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border);}
+.search-item:last-child{border:none;}
+.search-item:hover{background:var(--bg3);}
+.search-item-id{font-weight:600;color:var(--purple);margin-right:6px;}
+.pr-line-item{display:grid;grid-template-columns:1fr 80px 24px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);}
+.pr-line-item:last-child{border:none;}
+.withdraw-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.withdraw-item:last-child{border:none;}
+.drill-row{cursor:pointer;}
+.drill-row:hover td{background:var(--bg3);}
+.back-btn{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--purple);cursor:pointer;margin-bottom:10px;background:none;border:none;font-family:var(--font);}
+.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--text3);flex-direction:column;gap:10px;}
+.spinner{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--purple);border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@media(max-width:768px){
+  .sidebar{width:52px;}
+  .sb-logo-text,.sb-logo-sub,.sb-sec,.sb-item span,.sb-uname,.sb-urole{display:none;}
+  .sb-item{justify-content:center;padding:10px;}
+  .metrics{grid-template-columns:1fr 1fr;}
+  .two-col,.three-col{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-box"><i class="ti ti-building-warehouse"></i></div>
+      <div><div class="sb-logo-text">AP Stock</div><div class="sb-logo-sub">BG2 · 2026</div></div>
+    </div>
+    <div class="sb-sec">หลัก</div>
+    <button class="sb-item active" onclick="goTab('overview',this)"><i class="ti ti-layout-dashboard"></i><span>ภาพรวม</span></button>
+    <button class="sb-item" onclick="goTab('inventory',this)"><i class="ti ti-packages"></i><span>สินค้าคงคลัง</span></button>
+    <button class="sb-item" onclick="goTab('withdraw',this)"><i class="ti ti-transfer-out"></i><span>เบิกสินค้า</span></button>
+    <button class="sb-item" onclick="goTab('pr',this)"><i class="ti ti-file-invoice"></i><span>PR Tracking</span><span class="sb-badge" id="pr-badge">0</span></button>
+    <div class="sb-sec">ข้อมูล</div>
+    <button class="sb-item" onclick="goTab('forecast',this)"><i class="ti ti-trending-up"></i><span>Forecast</span></button>
+    <button class="sb-item" onclick="goTab('projects',this)"><i class="ti ti-building"></i><span>โครงการ</span></button>
+    <button class="sb-item" onclick="goTab('spec',this)"><i class="ti ti-file-description"></i><span>สเปคสินค้า</span></button>
+    <div class="sb-bottom">
+      <div class="sb-user">
+        <div class="sb-avatar">AP</div>
+        <div><div class="sb-uname">AP Stock</div><div class="sb-urole">BG2 · 2026–2027</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="page-title">ภาพรวม</div>
+      <button class="tb-btn"><i class="ti ti-download"></i> Export</button>
+    </div>
+    <div class="content" id="main-content">
+      <div class="loading"><div class="spinner"></div><div>กำลังโหลดข้อมูล...</div></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB8s2Bs7NyQx1gm72faKajBABDFblOWfFM",
+  authDomain: "ap-stock-manager.firebaseapp.com",
+  projectId: "ap-stock-manager",
+  storageBucket: "ap-stock-manager.firebasestorage.app",
+  messagingSenderId: "963440847745",
+  appId: "1:963440847745:web:b63a4cc8854e39b2369680",
+  measurementId: "G-1NPKS0E087"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let stockData = {};
+let prList = [];
+let withdrawLog = [];
+let currentTab = 'overview';
+let currentPeriod = 'week';
+let prFilter = 'all';
+let selectedProject = null;
+
+const PRODUCTS = [
+  {id:'Y02K',code:'DDL-Y02K',name:'Kudos Y02-Knob',vendor:'CIT',brand:'pleno',price:3750,min:50},
+  {id:'Y02H',code:'DDL-Y02H',name:'Kudos Y02-Handle',vendor:'CIT',brand:'pleno',price:3750,min:50},
+  {id:'J03',code:'DDL-J03',name:'Kudos J03 No-Camera',vendor:'CIT',brand:'grande',price:5234,min:40},
+  {id:'J03P',code:'DDL-J03P',name:'Kudos J03 Pro',vendor:'CIT',brand:'dist',price:0,min:10},
+  {id:'P60',code:'DDL-P60',name:'Kudos P60',vendor:'CIT',brand:'bkm',price:4060,min:30},
+  {id:'A2H',code:'DDL-A2H',name:'Kudos A2-Handle',vendor:'CIT',brand:'bkm',price:4650,min:40},
+  {id:'A2K',code:'DDL-A2K',name:'Kudos A2-Knob',vendor:'CIT',brand:'bkm',price:4650,min:40},
+  {id:'A100',code:'DDL-A100',name:'Aqara A100',vendor:'Poontana',brand:'grande',price:4500,min:30},
+  {id:'EST',code:'DDL-EST',name:'Esther EAE-08',vendor:'Karat',brand:'api',price:8900,min:10},
+];
+
+const BRAND_ITEMS = {
+  pleno:['Y02K','Y02H'], grande:['J03','A100'], bkm:['A2H','A2K','P60'],
+  bkme:['J03','A100'], bkmc:['J03','A100'], api:['A2H','EST'], dist:['J03P'],
+};
+
+const ALL_PROJECTS = [
+  {id:'4137',name:'Pleno สุขสวัสดิ์-ประชาอุทิศ60',brand:'pleno'},
+  {id:'4166',name:'Pleno Town ลำลูกกาคลอง7',brand:'pleno'},
+  {id:'4134',name:'Pleno Town สุขุมวิท-บางปู',brand:'pleno'},
+  {id:'7061',name:'Pleno ติวานนท์',brand:'pleno'},
+  {id:'4074',name:'Pleno พหลโยธิน-ลำลูกกา',brand:'pleno'},
+  {id:'4178',name:'Pleno Town รังสิต-คลอง2',brand:'pleno'},
+  {id:'4072',name:'Pleno Town บางนา',brand:'pleno'},
+  {id:'4092',name:'Grande Pleno พหลฯ-วิภาวดี2',brand:'grande'},
+  {id:'4102',name:'Grande Pleno รามอินทรา-จตุโชติ',brand:'grande'},
+  {id:'7030',name:'Grande Pleno ราชพฤกษ์',brand:'grande'},
+  {id:'7114',name:'Grande Pleno พระราม9-มอเตอร์เวย์',brand:'grande'},
+  {id:'4076',name:'BKM วิภาวดี-แจ้งวัฒนะ',brand:'bkm'},
+  {id:'7053',name:'BKM ราชพฤกษ์-สาทร',brand:'bkm'},
+  {id:'7069',name:'BKM รามอินทรา83 สเตชั่น',brand:'bkm'},
+  {id:'4100',name:'BKM The Edition ศรีนครินทร์',brand:'bkme'},
+  {id:'4164',name:'BKM The Edition สาทร-กัลปพฤกษ์2',brand:'bkme'},
+  {id:'WA04',name:'BKM The Edition พระราม9-พัฒนาการ2',brand:'bkme'},
+  {id:'4116',name:'BKM Classe รัชโยธิน',brand:'bkmc'},
+  {id:'2029',name:'Apitown เชียงราย',brand:'api'},
+  {id:'2031',name:'Apitown อยุธยา',brand:'api'},
+  {id:'2047',name:'Apitown ฉะเชิงเทรา',brand:'api'},
+  {id:'2049',name:'Apitown นครปฐม',brand:'api'},
+  {id:'2054',name:'Apitown ระยอง2',brand:'api'},
+  {id:'2056',name:'District พหลโยธิน-วิภาวดี',brand:'dist'},
+  {id:'7164',name:'District บางนา กม.5',brand:'dist'},
+];
+
+const STATUS_MAP = {open:{cls:'b-pr-open',txt:'เปิด PR'},wait:{cls:'b-pr-wait',txt:'รอของเข้า'},done:{cls:'b-pr-done',txt:'เข้าคลังสำเร็จ'}};
+const NEXT_STATUS = {open:'wait',wait:'done'};
+const STOCK_MAP = {'Kudos Y02-Knob':'Y02K','Kudos Y02-Handle':'Y02H','Kudos J03 No-Camera':'J03','Kudos J03 Pro':'J03P','Kudos P60':'P60','Kudos A2-Handle':'A2H','Kudos A2-Knob':'A2K','Aqara A100':'A100','Esther EAE-08':'EST'};
+
+let stockInitDone = false;
+async function initFirestore() {
+  if (stockInitDone) return;
+  stockInitDone = true;
+  const stockSnap = await getDocs(collection(db, 'stock'));
+  if (stockSnap.empty) {
+    const def = {Y02K:50,Y02H:67,J03:28,J03P:9,P60:54,A2H:82,A2K:45,A100:22,EST:14};
+    for (const [id, qty] of Object.entries(def)) {
+      await addDoc(collection(db, 'stock'), {productId:id, qty, updatedAt:serverTimestamp()});
+    }
+  }
+}
+
+function startListeners() {
+  onSnapshot(collection(db, 'stock'), snap => {
+    snap.forEach(d => { stockData[d.data().productId] = {docId:d.id, qty:d.data().qty}; });
+    if (currentTab === 'inventory') renderInventory();
+    if (currentTab === 'overview') renderOverview();
+  });
+  onSnapshot(query(collection(db, 'pr'), orderBy('createdAt','desc')), snap => {
+    prList = snap.docs.map(d => ({docId:d.id, ...d.data()}));
+    renderPRBadge();
+    if (currentTab === 'pr') renderPRTab();
+    if (currentTab === 'overview') renderOverview();
+  });
+  onSnapshot(query(collection(db, 'withdrawLog'), orderBy('createdAt','desc')), snap => {
+    withdrawLog = snap.docs.map(d => ({docId:d.id, ...d.data()}));
+    if (currentTab === 'withdraw' && !selectedProject) renderWithdraw();
+    if (currentTab === 'overview') renderOverview();
+  });
+}
+
+const TAB_TITLES = {overview:'ภาพรวม',inventory:'สินค้าคงคลัง',withdraw:'เบิกสินค้า',pr:'PR Tracking',forecast:'Forecast',projects:'โครงการ',spec:'สเปคสินค้า'};
+
+window.goTab = function(id, el) {
+  currentTab = id;
+  document.getElementById('page-title').textContent = TAB_TITLES[id] || id;
+  document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderTab(id);
+};
+
+function renderTab(id) {
+  switch(id) {
+    case 'overview': renderOverview(); break;
+    case 'inventory': renderInventory(); break;
+    case 'withdraw': renderWithdraw(); break;
+    case 'pr': renderPRTab(); break;
+    case 'forecast': renderForecast(); break;
+    case 'projects': window.renderProjects(); break;
+    case 'spec': renderSpec(); break;
+  }
+}
+
+function getStatus(id) {
+  const qty = stockData[id]?.qty ?? 0;
+  const p = PRODUCTS.find(x => x.id === id);
+  const min = p?.min ?? 0;
+  if (qty >= min) return {cls:'b-ok',txt:'OK'};
+  if (qty >= min * 0.6) return {cls:'b-low',txt:'ต่ำ'};
+  return {cls:'b-crit',txt:'วิกฤต'};
+}
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function renderPRBadge() {
+  const open = prList.filter(p => p.status === 'open').length;
+  document.getElementById('pr-badge').textContent = open;
+}
+
+function renderOverview() {
+  const openPR = prList.filter(p => p.status === 'open').length;
+  const todayW = withdrawLog.filter(l => {
+    if (!l.createdAt) return false;
+    const d = l.createdAt.toDate ? l.createdAt.toDate() : new Date();
+    return d.toDateString() === new Date().toDateString();
+  }).length;
+  const critItems = PRODUCTS.filter(p => getStatus(p.id).cls === 'b-crit');
+  const alertHtml = critItems.length ? `
+    <div class="alert-banner">
+      <i class="ti ti-alert-triangle" style="font-size:18px;color:#A32D2D;flex-shrink:0;"></i>
+      <div style="flex:1;font-size:11px;color:#791F1F;"><strong>สต็อควิกฤต ${critItems.length} รายการ:</strong> ${critItems.map(p=>p.name).join(' · ')}</div>
+      <button onclick="goTab('pr',document.querySelectorAll('.sb-item')[3])" style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid #F09595;background:#fff;color:#A32D2D;cursor:pointer;">ดู PR →</button>
+    </div>` : '';
+  const recentLog = withdrawLog.slice(0,3).map(l => `
+    <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px;">
+      <span>${l.project||'—'}</span><span style="color:var(--text2);">${l.product||'—'} · ${l.qty||0} ชิ้น</span>
+    </div>`).join('') || '<div style="font-size:11px;color:var(--text3);padding:8px 0;">ยังไม่มีการเบิก</div>';
+  const chartData = currentPeriod==='week'
+    ? {labels:['จ','อ','พ','พฤ','ศ','ส','อา'],values:[12,25,18,44,30,80,45]}
+    : {labels:['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.'],values:[320,410,285,520,390,275]};
+  const maxVal = Math.max(...chartData.values, 1);
+  const colors = ['#534AB7','#1D9E75','#BA7517','#185FA5','#639922','#A32D2D','#0F6E56'];
+  const barsHtml = chartData.values.map((v,i) => {
+    const h = Math.max(6,(v/maxVal)*90);
+    return `<div class="bar-col"><div class="bar-val">${v}</div><div class="bar" style="height:${h}px;background:${colors[i%colors.length]};"></div><div class="bar-lbl">${chartData.labels[i]}</div></div>`;
+  }).join('');
+  document.getElementById('main-content').innerHTML = `
+    ${alertHtml}
+    <div class="metrics">
+      <div class="metric"><div class="metric-lbl"><i class="ti ti-building"></i> โครงการ</div><div class="metric-val">153</div><div class="metric-sub">7 Brands</div></div>
+      <div class="metric"><div class="metric-lbl"><i class="ti ti-home"></i> ยูนิตรวม</div><div class="metric-val">28,461</div><div class="metric-sub">ทุกโครงการ</div></div>
+      <div class="metric"><div class="metric-lbl"><i class="ti ti-transfer-out"></i> เบิกวันนี้</div><div class="metric-val">${todayW}</div><div class="metric-sub">รายการ</div></div>
+      <div class="metric"><div class="metric-lbl"><i class="ti ti-file-invoice"></i> PR เปิดอยู่</div><div class="metric-val" style="color:var(--red);">${openPR}</div><div class="metric-sub">รายการ</div></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-hd" style="margin-bottom:0;"><i class="ti ti-chart-bar"></i> ยอดเบิกสินค้า</div>
+        <div class="toggle-group">
+          <button class="toggle-btn ${currentPeriod==='week'?'active':''}" onclick="switchPeriod('week')">รายอาทิตย์</button>
+          <button class="toggle-btn ${currentPeriod==='month'?'active':''}" onclick="switchPeriod('month')">รายเดือน</button>
+        </div>
+      </div>
+      <div class="chart-wrap">${barsHtml}</div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-hd"><i class="ti ti-building"></i> สรุปตาม Brand</div>
+        <table><thead><tr><th>Brand</th><th>โครงการ</th><th>ยูนิต</th><th>FC/ปี</th><th>Door Lock</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge b-pleno">Pleno/Town</span></td><td>72</td><td>18,420</td><td>4,605</td><td style="font-size:10px;">Y02-Knob/Handle</td></tr>
+          <tr><td><span class="badge b-grande">Grande Pleno</span></td><td>28</td><td>4,821</td><td>1,205</td><td style="font-size:10px;">J03 / Aqara A100</td></tr>
+          <tr><td><span class="badge b-bkm">BKM</span></td><td>22</td><td>3,864</td><td>966</td><td style="font-size:10px;">A2 / P60</td></tr>
+          <tr><td><span class="badge b-bkme">BKM Edition</span></td><td>14</td><td>1,201</td><td>300</td><td style="font-size:10px;">J03 / Aqara</td></tr>
+          <tr><td><span class="badge b-api">Apitown</span></td><td>12</td><td>2,961</td><td>740</td><td style="font-size:10px;">A2 / P60 / Esther</td></tr>
+          <tr><td><span class="badge b-dist">District</span></td><td>2</td><td>36</td><td>9</td><td style="font-size:10px;">J03 Pro</td></tr>
+        </tbody></table>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card"><div class="card-hd"><i class="ti ti-transfer-out"></i> เบิกล่าสุด</div>${recentLog}</div>
+        <div class="ai-box"><div class="ai-lbl"><i class="ti ti-sparkles"></i> AI Insight</div><div class="ai-txt">Pleno/Town ครอง 65% ของ demand · Q3 คาดต้องการ Y02-Knob 1,151 ชิ้น · ควรเปิด PR เพิ่มด่วน</div></div>
+      </div>
+    </div>`;
+}
+window.switchPeriod = function(p) { currentPeriod = p; renderOverview(); };
+
+function renderInventory() {
+  const rows = PRODUCTS.map(p => {
+    const qty = stockData[p.id]?.qty ?? '...';
+    const s = getStatus(p.id);
+    const brandCls = {pleno:'b-pleno',grande:'b-grande',bkm:'b-bkm',bkme:'b-bkme',bkmc:'b-bkmc',api:'b-api',dist:'b-dist'}[p.brand]||'b-ok';
+    return `<tr data-v="${p.vendor==='CIT'?'cit':'other'}">
+      <td style="font-size:10px;color:var(--text3);">${p.code}</td>
+      <td><strong>${p.name}</strong></td>
+      <td style="font-size:10px;">${p.vendor}</td>
+      <td><span class="badge ${brandCls}">${p.brand}</span></td>
+      <td>${p.price?p.price.toLocaleString():'—'}</td>
+      <td id="inv-qty-${p.id}">${qty}</td>
+      <td>${p.min}</td>
+      <td><span class="badge ${s.cls}" id="inv-st-${p.id}">${s.txt}</span></td>
+      <td><button class="edit-btn" id="inv-btn-${p.id}" onclick="editStock('${p.id}')">แก้ไข</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('main-content').innerHTML = `
+    <div class="chip-row">
+      <button class="chip active" onclick="filterInv(this,'all')">ทั้งหมด</button>
+      <button class="chip" onclick="filterInv(this,'cit')">Kudos by CIT</button>
+    </div>
+    <div class="card">
+      <div class="card-hd"><i class="ti ti-packages"></i> สินค้าคงคลัง — แก้ไขได้โดยตรง</div>
+      <table><thead><tr><th>รหัส</th><th>สินค้า</th><th>Vendor</th><th>Brand</th><th>ราคา</th><th>คงเหลือ</th><th>Min</th><th>สถานะ</th><th>แก้ไข</th></tr></thead>
+      <tbody id="inv-body">${rows}</tbody></table>
+    </div>`;
+}
+window.filterInv = function(btn, v) {
+  document.querySelectorAll('.chip-row .chip').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#inv-body tr').forEach(tr=>{tr.style.display=(v==='all'||tr.dataset.v===v)?'':'none';});
+};
+window.editStock = async function(id) {
+  const btn = document.getElementById('inv-btn-'+id);
+  const cell = document.getElementById('inv-qty-'+id);
+  if (btn.textContent==='แก้ไข') {
+    cell.innerHTML = `<input class="qty-input" id="inp-${id}" type="number" value="${stockData[id]?.qty??0}" min="0">`;
+    btn.textContent='บันทึก'; btn.className='save-btn';
+  } else {
+    const val = parseInt(document.getElementById('inp-'+id)?.value)||0;
+    const docId = stockData[id]?.docId;
+    if (docId) await updateDoc(doc(db,'stock',docId),{qty:val,updatedAt:serverTimestamp()});
+    btn.textContent='แก้ไข'; btn.className='edit-btn';
+  }
+};
+
+function renderWithdraw() {
+  const logRows = withdrawLog.map(l=>`
+    <tr data-brand="${l.brand||''}">
+      <td style="font-size:10px;">${fmtDate(l.createdAt)}</td>
+      <td style="font-size:10px;">${l.project||'—'}</td>
+      <td style="font-size:10px;">${l.product||'—'}</td>
+      <td>${l.qty||0}</td>
+    </tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:16px;">ยังไม่มีการเบิก</td></tr>';
+  document.getElementById('main-content').innerHTML = `
+    <div class="two-col">
+      <div class="card">
+        <div class="card-hd"><i class="ti ti-transfer-out"></i> เบิกสินค้า</div>
+        <div class="form-group">
+          <div class="form-label">ค้นหาโครงการ (พิมพ์รหัส หรือชื่อ)</div>
+          <div class="search-wrap">
+            <i class="ti ti-search search-icon"></i>
+            <input class="search-input" id="wd-search" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off">
+            <div class="search-dropdown" id="wd-dropdown"></div>
+          </div>
+          <div id="wd-selected" style="font-size:11px;color:var(--purple);margin-top:4px;min-height:16px;"></div>
+        </div>
+        <div id="wd-items" style="display:none;">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">สินค้าตาม Brand — map อัตโนมัติ</div>
+          <div id="wd-item-list"></div>
+          <div style="margin-top:10px;display:flex;gap:8px;">
+            <input class="form-input" id="wd-note" placeholder="หมายเหตุ (ถ้ามี)" style="flex:1;">
+            <button class="tb-btn primary" onclick="confirmWithdraw()"><i class="ti ti-check"></i> ยืนยันเบิก</button>
+          </div>
+        </div>
+        <div id="wd-placeholder" style="font-size:11px;color:var(--text3);padding:20px 0;text-align:center;">
+          <i class="ti ti-search" style="display:block;font-size:28px;margin-bottom:8px;"></i>ค้นหาโครงการเพื่อเริ่มเบิกสินค้า
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><i class="ti ti-history"></i> Log การเบิก</div>
+        <div class="chip-row">
+          <button class="chip active" onclick="filterLog(this,'all')">ทั้งหมด</button>
+          <button class="chip" onclick="filterLog(this,'pleno')">Pleno</button>
+          <button class="chip" onclick="filterLog(this,'grande')">Grande</button>
+          <button class="chip" onclick="filterLog(this,'bkm')">BKM</button>
+          <button class="chip" onclick="filterLog(this,'api')">Apitown</button>
+        </div>
+        <table><thead><tr><th>วันที่</th><th>โครงการ</th><th>สินค้า</th><th>จำนวน</th></tr></thead>
+        <tbody id="log-body">${logRows}</tbody></table>
+      </div>
+    </div>`;
+}
+
+// Global click handler for search dropdown — ตั้งครั้งเดียวตอน init
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) {
+    document.getElementById('wd-dropdown')?.classList.remove('open');
+  }
+});
+window.onSearch = function(q) {
+  const dd = document.getElementById('wd-dropdown');
+  if (!q) { dd?.classList.remove('open'); return; }
+  const res = ALL_PROJECTS.filter(p=>p.id.includes(q)||p.name.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  if (!res.length) { dd?.classList.remove('open'); return; }
+  dd.innerHTML = res.map(p=>`<div class="search-item" onclick="selectProject('${p.id}','${p.name}','${p.brand}')"><span class="search-item-id">${p.id}</span>${p.name}</div>`).join('');
+  dd.classList.add('open');
+};
+window.selectProject = function(id, name, brand) {
+  selectedProject = {id, name, brand};
+  document.getElementById('wd-search').value = `${id} · ${name}`;
+  document.getElementById('wd-dropdown').classList.remove('open');
+  document.getElementById('wd-selected').textContent = `Brand: ${brand.toUpperCase()} · map สินค้าอัตโนมัติ`;
+  const items = (BRAND_ITEMS[brand]||[]).map(pid=>PRODUCTS.find(p=>p.id===pid)).filter(Boolean);
+  document.getElementById('wd-item-list').innerHTML = items.map(it=>`
+    <div class="withdraw-item">
+      <div style="flex:1;"><div style="font-size:12px;font-weight:600;">${it.name}</div>
+      <div style="font-size:10px;color:var(--text2);">คงเหลือ: <strong>${stockData[it.id]?.qty??'...'}</strong> ชิ้น</div></div>
+      <input class="qty-input" id="wd-${it.id}" type="number" placeholder="0" min="0">
+      <span style="font-size:10px;color:var(--text3);">ชิ้น</span>
+    </div>`).join('');
+  document.getElementById('wd-items').style.display = '';
+  document.getElementById('wd-placeholder').style.display = 'none';
+};
+window.confirmWithdraw = async function() {
+  if (!selectedProject) return;
+  const items = (BRAND_ITEMS[selectedProject.brand]||[]).map(pid=>PRODUCTS.find(p=>p.id===pid)).filter(Boolean);
+  let ok = false;
+  for (const it of items) {
+    const q = parseInt(document.getElementById('wd-'+it.id)?.value)||0;
+    if (q > 0) {
+      ok = true;
+      const docId = stockData[it.id]?.docId;
+      const newQty = Math.max(0,(stockData[it.id]?.qty||0)-q);
+      if (docId) await updateDoc(doc(db,'stock',docId),{qty:newQty,updatedAt:serverTimestamp()});
+      await addDoc(collection(db,'withdrawLog'),{
+        project:selectedProject.name, projectId:selectedProject.id,
+        product:it.name, productId:it.id, qty:q,
+        brand:selectedProject.brand, note:document.getElementById('wd-note')?.value||'',
+        createdAt:serverTimestamp()
+      });
+    }
+  }
+  if (!ok) { alert('กรุณากรอกจำนวนที่ต้องการเบิก'); return; }
+  selectedProject = null;
+  document.getElementById('wd-search').value = '';
+  document.getElementById('wd-selected').textContent = '';
+  document.getElementById('wd-items').style.display = 'none';
+  document.getElementById('wd-placeholder').style.display = '';
+};
+window.filterLog = function(btn, brand) {
+  btn.closest('.chip-row').querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#log-body tr').forEach(tr=>{tr.style.display=(brand==='all'||tr.dataset.brand===brand)?'':'none';});
+};
+
+function renderPRTab() {
+  const filtered = prFilter==='all'?prList:prList.filter(p=>p.status===prFilter);
+  const rows = filtered.map(p=>{
+    const s = STATUS_MAP[p.status]||STATUS_MAP.open;
+    const nxt = NEXT_STATUS[p.status];
+    const linesHtml = (p.lines||[]).map(l=>`<div style="font-size:10px;color:var(--text2);">${l.product} · <strong>${l.qty}</strong> ชิ้น</div>`).join('');
+    const btnHtml = nxt?`<button class="edit-btn" onclick="updatePR('${p.docId}','${nxt}')">${nxt==='wait'?'→ รอของเข้า':'→ เข้าคลัง'}</button>`:`<span style="font-size:10px;color:var(--text3);">✓</span>`;
+    return `<tr><td style="font-size:10px;font-weight:600;color:var(--purple);">${p.prNum||'—'}</td><td style="font-size:11px;">${p.project||'—'}</td><td>${linesHtml}</td><td style="font-size:10px;">${p.vendor||'—'}</td><td style="font-size:10px;">${fmtDate(p.createdAt)}</td><td><span class="badge ${s.cls}">${s.txt}</span></td><td>${btnHtml}</td></tr>`;
+  }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px;">ไม่มีรายการ</td></tr>';
+  document.getElementById('main-content').innerHTML = `
+    <div class="card">
+      <div class="card-hd"><i class="ti ti-plus" style="color:var(--purple);"></i> เปิด PR ใหม่</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div class="form-group" style="margin:0;"><div class="form-label">เลขที่ PR</div><input class="form-input" id="pr-num" placeholder="เช่น PR-2026-042"></div>
+        <div class="form-group" style="margin:0;"><div class="form-label">โครงการ</div>
+          <select class="form-select" id="pr-project">${ALL_PROJECTS.map(p=>`<option value="${p.id}|${p.name}">${p.id} · ${p.name}</option>`).join('')}</select>
+        </div>
+        <div class="form-group" style="margin:0;"><div class="form-label">Vendor</div>
+          <select class="form-select" id="pr-vendor"><option>CIT · 09-0640-7822</option><option>Poontana · 08-3514-4498</option><option>Karat</option></select>
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;">รายการสินค้าใน PR นี้</div>
+      <div id="pr-lines"></div>
+      <button class="edit-btn" onclick="addPRLine()" style="margin-top:6px;display:flex;align-items:center;gap:4px;"><i class="ti ti-plus"></i> เพิ่มรายการสินค้า</button>
+      <button class="tb-btn primary" style="margin-top:10px;" onclick="submitPR()"><i class="ti ti-file-invoice"></i> เปิด PR</button>
+    </div>
+    <div class="card">
+      <div class="card-hd"><i class="ti ti-file-invoice"></i> รายการ PR</div>
+      <div class="chip-row">
+        <button class="chip ${prFilter==='all'?'active':''}" onclick="setPRFilter('all')">ทั้งหมด</button>
+        <button class="chip ${prFilter==='open'?'active':''}" onclick="setPRFilter('open')">เปิด PR</button>
+        <button class="chip ${prFilter==='wait'?'active':''}" onclick="setPRFilter('wait')">รอของเข้า</button>
+        <button class="chip ${prFilter==='done'?'active':''}" onclick="setPRFilter('done')">เข้าคลังสำเร็จ</button>
+      </div>
+      <table><thead><tr><th>เลข PR</th><th>โครงการ</th><th>รายการสินค้า</th><th>Vendor</th><th>วันที่</th><th>Status</th><th>อัปเดต</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    </div>`;
+  addPRLine();
+}
+window.setPRFilter = function(s) { prFilter=s; renderPRTab(); };
+window.addPRLine = function() {
+  const id = Date.now();
+  const div = document.createElement('div');
+  div.className='pr-line-item'; div.id='prl-'+id;
+  div.innerHTML = `<select class="form-select" style="height:28px;font-size:11px;">${PRODUCTS.map(p=>`<option>${p.name}</option>`).join('')}</select><input class="qty-input" type="number" placeholder="จำนวน" min="1" style="width:100%;"><button class="del-btn" onclick="document.getElementById('prl-${id}').remove()"><i class="ti ti-x"></i></button>`;
+  document.getElementById('pr-lines')?.appendChild(div);
+};
+window.submitPR = async function() {
+  const num = document.getElementById('pr-num')?.value.trim();
+  if (!num) { alert('กรุณากรอกเลขที่ PR'); return; }
+  const lineEls = document.querySelectorAll('#pr-lines .pr-line-item');
+  if (!lineEls.length) { alert('กรุณาเพิ่มรายการสินค้า'); return; }
+  const lines = [];
+  lineEls.forEach(el=>{const sel=el.querySelector('select');const inp=el.querySelector('input');const q=parseInt(inp?.value)||0;if(q>0)lines.push({product:sel.value,qty:q});});
+  if (!lines.length) { alert('กรุณากรอกจำนวนสินค้า'); return; }
+  const projVal = document.getElementById('pr-project')?.value.split('|');
+  await addDoc(collection(db,'pr'),{prNum:num,project:projVal?.[1]||'',projectId:projVal?.[0]||'',vendor:document.getElementById('pr-vendor')?.value.split(' ·')[0]||'',lines,status:'open',createdAt:serverTimestamp()});
+};
+window.updatePR = async function(docId, newStatus) {
+  await updateDoc(doc(db,'pr',docId),{status:newStatus});
+  if (newStatus==='done') {
+    try {
+      const pr = prList.find(p => p.docId === docId);
+      const lines = pr?.lines || [];
+      for (const l of lines) {
+        const sid = STOCK_MAP[l.product];
+        if (sid && stockData[sid]?.docId) {
+          await updateDoc(doc(db,'stock',stockData[sid].docId),{qty:(stockData[sid]?.qty||0)+l.qty,updatedAt:serverTimestamp()});
+        }
+      }
+    } catch(e) { console.error(e); }
+  }
+};
+
+function renderForecast() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="ai-box"><div class="ai-lbl"><i class="ti ti-sparkles"></i> AI Forecast Summary — BG2 ปี 2026</div>
+    <div class="ai-txt">Pleno/Town ครอง 65% ของ demand · Grande Pleno ควรเสนอ Aqara A100 กับลูกค้า iPhone · Apitown กระจาย 12 จังหวัด ควรสต็อค A2 ล่วงหน้า 1 ไตรมาส</div></div>
+    <div class="three-col">
+      <div class="card"><div class="card-hd" style="color:#185FA5;"><i class="ti ti-building"></i> Pleno / Town</div><div style="font-size:11px;line-height:1.9;"><strong>Y02-Knob / Handle</strong><br><span style="color:var(--text2);">72 โครงการ · 18,420 ยูนิต</span><br><span style="color:#185FA5;font-weight:600;">FC/ปี 4,605 · /Q 1,151</span></div></div>
+      <div class="card"><div class="card-hd" style="color:#534AB7;"><i class="ti ti-building"></i> Grande Pleno</div><div style="font-size:11px;line-height:1.9;"><strong>J03 / Aqara A100</strong><br><span style="color:var(--text2);">28 โครงการ · 4,821 ยูนิต</span><br><span style="color:#534AB7;font-weight:600;">FC/ปี 1,205 · /Q 301</span></div></div>
+      <div class="card"><div class="card-hd" style="color:#0F6E56;"><i class="ti ti-building"></i> BKM / Edition</div><div style="font-size:11px;line-height:1.9;"><strong>A2 / J03 / Aqara</strong><br><span style="color:var(--text2);">36 โครงการ · 5,065 ยูนิต</span><br><span style="color:#0F6E56;font-weight:600;">FC/ปี 1,266 · /Q 317</span></div></div>
+      <div class="card"><div class="card-hd" style="color:#3B6D11;"><i class="ti ti-building"></i> Apitown</div><div style="font-size:11px;line-height:1.9;"><strong>A2-Handle / P60 / Esther</strong><br><span style="color:var(--text2);">12 โครงการ · 2,961 ยูนิต</span><br><span style="color:#3B6D11;font-weight:600;">FC/ปี 740 · /Q 185</span></div></div>
+      <div class="card"><div class="card-hd" style="color:#633806;"><i class="ti ti-building"></i> BKM Classe</div><div style="font-size:11px;line-height:1.9;"><strong>J03 / Aqara A100</strong><br><span style="color:var(--text2);">3 โครงการ · 138 ยูนิต</span><br><span style="color:#633806;font-weight:600;">FC/ปี 35 · /Q 9</span></div></div>
+      <div class="card"><div class="card-hd" style="color:#444441;"><i class="ti ti-building"></i> District</div><div style="font-size:11px;line-height:1.9;"><strong>Kudos J03 Pro</strong><br><span style="color:var(--text2);">2 โครงการ · 36 ยูนิต</span><br><span style="color:#444441;font-weight:600;">FC/ปี 9 · /Q 2</span></div></div>
+    </div>`;
+}
+
+const BRAND_DATA = {
+  pleno:{label:'Pleno / Pleno Town',badge:'b-pleno',lock:'Y02-Knob / Y02-Handle',projects:[['4137','Pleno สุขสวัสดิ์ฯ','3','226','226','56.5','14.1'],['4166','Pleno Town ลำลูกกาคลอง7','3','495','—','123.8','30.9'],['4072','Pleno Town บางนา','3','351','—','87.8','21.9'],['7061','Pleno ติวานนท์','3','499','—','124.8','31.2'],['4074','Pleno พหลโยธิน-ลำลูกกา','3','467','—','116.8','29.2']]},
+  grande:{label:'Grande Pleno',badge:'b-grande',lock:'J03 No-Camera / Aqara A100',projects:[['4092','Grande Pleno พหลฯ-วิภาวดี2','4','285','—','71.3','17.8'],['4102','Grande Pleno รามอินทรา-จตุโชติ','3','378','—','94.5','23.6'],['7030','Grande Pleno ราชพฤกษ์','3','373','—','93.3','23.3'],['7114','Grande Pleno พระราม9','3','295','—','73.8','18.4']]},
+  bkm:{label:'BKM',badge:'b-bkm',lock:'A2-Handle / A2-Knob / P60',projects:[['7053','BKM ราชพฤกษ์-สาทร','3','364','—','91','22.8'],['7069','BKM รามอินทรา83','3','458','—','114.5','28.6'],['4076','BKM วิภาวดี-แจ้งวัฒนะ','3','298','—','74.5','18.6']]},
+  bkme:{label:'BKM The Edition',badge:'b-bkme',lock:'J03 / Aqara A100',projects:[['4100','BKM The Edition ศรีนครินทร์','3','275','—','68.8','17.2'],['4164','BKM The Edition สาทร-กัลปพฤกษ์2','3','144','—','36','9'],['WA04','BKM The Edition พระราม9','3','175','—','43.8','10.9']]},
+  bkmc:{label:'BKM Classe',badge:'b-bkmc',lock:'J03 / Aqara A100',projects:[['4116','BKM Classe รัชโยธิน','3','62','—','15.5','3.9'],['4140','BKM Classe รัชดา','3','38','—','9.5','2.4']]},
+  api:{label:'Apitown',badge:'b-api',lock:'A2-Handle / P60 / Esther',projects:[['2029','Apitown เชียงราย','3','146','—','36.5','9.1'],['2031','Apitown อยุธยา','3','441','—','110.3','27.6'],['2047','Apitown ฉะเชิงเทรา','3','444','—','111','27.8']]},
+  dist:{label:'District',badge:'b-dist',lock:'Kudos J03 Pro',projects:[['2056','District พหลฯ-วิภาวดี','4','20','—','5','1.3'],['7164','District บางนา กม.5','1','16','—','4','1']]},
+};
+
+window.renderProjects = function renderProjects() {
+  const rows = Object.entries(BRAND_DATA).map(([key,d])=>`
+    <tr class="drill-row" onclick="showBrand('${key}')">
+      <td><span class="badge ${d.badge}">${d.label}</span></td>
+      <td>${d.projects.length}</td>
+      <td>${d.projects.reduce((s,p)=>s+parseInt(p[3]||0),0).toLocaleString()}</td>
+      <td style="color:var(--purple);font-size:10px;">ดู →</td>
+    </tr>`).join('');
+  document.getElementById('main-content').innerHTML = `
+    <div id="brand-level">
+      <div class="card">
+        <div class="card-hd"><i class="ti ti-building"></i> Brand Level — กดเพื่อ drill down</div>
+        <table><thead><tr><th>Brand</th><th>โครงการ</th><th>ยูนิตรวม</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>
+    </div>
+    <div id="proj-detail" style="display:none;flex-direction:column;gap:12px;"></div>`;
+}
+window.showBrand = function(key) {
+  const d = BRAND_DATA[key];
+  document.getElementById('brand-level').style.display = 'none';
+  const det = document.getElementById('proj-detail');
+  det.style.display = 'flex';
+  const projRows = d.projects.map(p=>`<tr><td style="font-size:10px;color:var(--text3);">${p[0]}</td><td><strong>${p[1]}</strong></td><td>${p[2]}</td><td>${p[3]}</td><td><input class="qty-input" placeholder="${p[4]}" style="width:60px;"></td><td>${p[5]}</td><td>${p[6]}</td><td><button class="save-btn" onclick="this.textContent='✓'">บันทึก</button></td></tr>`).join('');
+  det.innerHTML = `
+    <button class="back-btn" onclick="renderProjects()"><i class="ti ti-arrow-left"></i> กลับ Brand level</button>
+    <div class="card">
+      <div class="card-hd"><span class="badge ${d.badge}">${d.label}</span> · ${d.lock}</div>
+      <table><thead><tr><th>Plant</th><th>โครงการ</th><th>Seg</th><th>ยูนิต</th><th>คงเหลือ</th><th>FC/ปี</th><th>FC/Q</th><th>แก้ไข</th></tr></thead>
+      <tbody>${projRows}</tbody></table>
+    </div>`;
+};
+
+function renderSpec() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="card">
+      <div class="card-hd"><i class="ti ti-file-description"></i> สเปคสินค้า — BG2 REV.1 · 2026–2027</div>
+      <table><thead><tr><th>Brand</th><th>ประเภท</th><th>สินค้า</th><th>ราคา ex VAT</th><th>Vendor</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="2"><span class="badge b-pleno">Pleno/Town</span></td><td>UPVC Knob</td><td>Kudos Y02-Knob</td><td>3,750</td><td>CIT</td></tr>
+        <tr><td>Handle</td><td>Kudos Y02-Handle</td><td>3,750</td><td>CIT</td></tr>
+        <tr><td rowspan="3"><span class="badge b-grande">Grande Pleno</span></td><td>TWH/TH UPVC</td><td>Kudos J03 No-Camera</td><td>5,234</td><td>CIT</td></tr>
+        <tr><td>Outdoor</td><td>Kudos P60</td><td>4,060</td><td>CIT</td></tr>
+        <tr><td>All Type (Apple)</td><td>Aqara A100</td><td>4,500–8,500</td><td>Poontana</td></tr>
+        <tr><td rowspan="3"><span class="badge b-bkm">BKM</span></td><td>Handle</td><td>Kudos A2-Handle</td><td>4,650</td><td>CIT</td></tr>
+        <tr><td>UPVC Knob</td><td>Kudos A2-Knob</td><td>4,650</td><td>CIT</td></tr>
+        <tr><td>Outdoor</td><td>Kudos P60</td><td>4,060</td><td>CIT</td></tr>
+        <tr><td rowspan="2"><span class="badge b-bkme">BKM Edition</span></td><td>UPVC</td><td>Kudos J03 No-Camera</td><td>5,234</td><td>CIT</td></tr>
+        <tr><td>All Type (Apple)</td><td>Aqara A100</td><td>4,500–8,500</td><td>Poontana</td></tr>
+        <tr><td rowspan="2"><span class="badge b-bkmc">BKM Classe</span></td><td>UPVC</td><td>Kudos J03 No-Camera</td><td>5,234</td><td>CIT</td></tr>
+        <tr><td>All Type (Apple)</td><td>Aqara A100</td><td>4,500–8,500</td><td>Poontana</td></tr>
+        <tr><td rowspan="2"><span class="badge b-api">Apitown</span></td><td>Handle/Knob</td><td>Kudos A2-Handle / A2-Knob</td><td>4,650</td><td>CIT</td></tr>
+        <tr><td>UPVC + Dummy</td><td>Esther EAE-08</td><td>8,900</td><td>Karat</td></tr>
+        <tr><td><span class="badge b-dist">District</span></td><td>UPVC</td><td>Kudos J03 Pro</td><td>—</td><td>CIT</td></tr>
+      </tbody></table>
+    </div>`;
+}
+
+async function main() {
+  await initFirestore();
+  startListeners();
+  renderOverview();
+}
+main().catch(console.error);
+</script>
+</body>
+</html>
