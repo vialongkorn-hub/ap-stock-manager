@@ -117,40 +117,15 @@ tr:hover td{background:var(--bg3);}
 .loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--text3);flex-direction:column;gap:10px;}
 .spinner{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--purple);border-radius:50%;animation:spin .6s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.bottom-nav{display:none;}
 @media(max-width:768px){
   .sidebar{display:none;}
   .shell{flex-direction:column;}
-  .main{height:100vh;display:flex;flex-direction:column;}
-  .content{padding:10px 12px;padding-bottom:72px;}
-  .topbar{height:52px;padding:0 14px;}
-  .topbar-title{font-size:15px;}
+  .main{height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{display:none;}
+  .content{flex:1;overflow:hidden;padding:0;display:flex;flex-direction:column;}
   .metrics{grid-template-columns:1fr 1fr;gap:8px;}
   .two-col,.three-col{grid-template-columns:1fr;}
   .card{overflow-x:auto;}
-  .bottom-nav{
-    display:flex;position:fixed;bottom:0;left:0;right:0;
-    background:var(--bg2);border-top:1px solid var(--border);
-    padding:6px 0 max(10px,env(safe-area-inset-bottom));
-    z-index:200;
-  }
-  .bn-item{
-    flex:1;display:flex;flex-direction:column;align-items:center;
-    gap:3px;font-size:9px;color:var(--text3);cursor:pointer;
-    padding:4px 0;background:none;border:none;font-family:var(--font);
-    position:relative;
-  }
-  .bn-item.active{color:var(--purple);}
-  .bn-item i{font-size:22px;}
-  .bn-dot{width:4px;height:4px;border-radius:50%;background:var(--purple);margin:0 auto;}
-  .bn-badge{
-    position:absolute;top:2px;left:50%;transform:translateX(4px);
-    background:var(--red);color:#fff;font-size:9px;font-weight:600;
-    padding:1px 4px;border-radius:999px;line-height:1.3;
-  }
-  .alert-banner{flex-wrap:wrap;gap:6px;}
-  table{font-size:11px;}
-  th{font-size:10px;}
 }
 </style>
 </head>
@@ -187,32 +162,6 @@ tr:hover td{background:var(--bg3);}
     </div>
   </div>
 </div>
-
-<!-- MOBILE BOTTOM NAV -->
-<nav class="bottom-nav" id="bottom-nav">
-  <button class="bn-item active" onclick="goTabMobile('overview',this)">
-    <i class="ti ti-layout-dashboard"></i>
-    <span>ภาพรวม</span>
-    <div class="bn-dot"></div>
-  </button>
-  <button class="bn-item" onclick="goTabMobile('inventory',this)">
-    <i class="ti ti-packages"></i>
-    <span>สินค้า</span>
-  </button>
-  <button class="bn-item" onclick="goTabMobile('withdraw',this)">
-    <i class="ti ti-transfer-out"></i>
-    <span>เบิก</span>
-  </button>
-  <button class="bn-item" onclick="goTabMobile('pr',this)">
-    <i class="ti ti-file-invoice"></i>
-    <span>PR</span>
-    <span class="bn-badge" id="bn-badge" style="display:none;">0</span>
-  </button>
-  <button class="bn-item" onclick="goTabMobile('projects',this)">
-    <i class="ti ti-building"></i>
-    <span>โครงการ</span>
-  </button>
-</nav>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -371,25 +320,16 @@ function fmtDate(ts) {
 }
 function renderPRBadge() {
   const open = prList.filter(p => p.status === 'open').length;
-  document.getElementById('pr-badge').textContent = open;
-  const bnBadge = document.getElementById('bn-badge');
-  if (bnBadge) {
-    bnBadge.textContent = open;
-    bnBadge.style.display = open > 0 ? '' : 'none';
-  }
+  const desktopBadge = document.getElementById('pr-badge');
+  if (desktopBadge) desktopBadge.textContent = open;
+  // mobile badge อยู่ใน mbBn() ซึ่ง re-render ทุกครั้งที่เปลี่ยน tab อยู่แล้ว
+  // ถ้าอยู่ที่ overview ให้ re-render เพื่ออัปเดต metric PR
+  if (isMobile() && currentTab === 'overview') renderOverviewMobile();
 }
 
-window.goTabMobile = function(id, el) {
-  document.querySelectorAll('.bn-item').forEach(b => {
-    b.classList.remove('active');
-    const dot = b.querySelector('.bn-dot');
-    if (dot) dot.style.display = 'none';
-  });
-  el.classList.add('active');
-  const dot = el.querySelector('.bn-dot');
-  if (dot) dot.style.display = '';
-  window.goTab(id, null);
-  document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+window.goTabMobile = function(id) {
+  currentTab = id;
+  renderTab(id);
 };
 
 function renderOverview() {
@@ -404,7 +344,7 @@ function renderOverview() {
     <div class="alert-banner">
       <i class="ti ti-alert-triangle" style="font-size:18px;color:#A32D2D;flex-shrink:0;"></i>
       <div style="flex:1;font-size:11px;color:#791F1F;"><strong>สต็อควิกฤต ${critItems.length} รายการ:</strong> ${critItems.map(p=>p.name).join(' · ')}</div>
-      <button onclick="goTab('pr',null);if(isMobile()){document.querySelectorAll('.bn-item')[3]?.click()}" style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid #F09595;background:#fff;color:#A32D2D;cursor:pointer;">ดู PR →</button>
+      <button onclick="isMobile()?goTabMobile('pr'):goTab('pr',null)" style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid #F09595;background:#fff;color:#A32D2D;cursor:pointer;">ดู PR →</button>
     </div>` : '';
   const recentLog = withdrawLog.slice(0,3).map(l => `
     <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px;">
@@ -775,203 +715,266 @@ function renderSpec() {
 
 // ── MOBILE RENDER FUNCTIONS ──
 
-function mbCard(hd, body) {
-  return `<div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;">${hd?`<div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;">${hd}</div>`:''}${body}</div>`;
+const MB_HD = '#1e1b4b';
+const MB_TEXT = '#fff';
+const MB_SUB = 'rgba(255,255,255,.55)';
+const MB_CHIP = 'border:0.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);';
+const MB_CHIP_ON = 'background:#fff;color:#1e1b4b;border:0.5px solid #fff;font-weight:500;';
+
+function mbHd(title, sub, rightHtml='', chipHtml='', searchHtml='') {
+  return `<div style="background:${MB_HD};padding:12px 14px ${chipHtml||searchHtml?'0':'14px'};">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${chipHtml||searchHtml?'0':'0'};">
+      <div><div style="font-size:16px;font-weight:500;color:${MB_TEXT};">${title}</div>${sub?`<div style="font-size:11px;color:${MB_SUB};margin-top:2px;">${sub}</div>`:''}</div>
+      ${rightHtml}
+    </div>
+    ${searchHtml?`<div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.12);border-radius:7px;padding:6px 10px;margin-top:10px;margin-bottom:12px;"><i class="ti ti-search" style="font-size:14px;color:rgba(255,255,255,.5);" aria-hidden="true"></i><span style="font-size:12px;color:rgba(255,255,255,.5);">${searchHtml}</span></div>`:''}
+    ${chipHtml?`<div style="display:flex;gap:6px;overflow-x:auto;padding:10px 0 12px;">${chipHtml}</div>`:''}
+  </div>`;
 }
-function mbProjRow(icon, iconBg, iconColor, name, sub, pct, pctColor, progColor, progW) {
-  return `<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:0.5px solid var(--border);">
-    <div style="width:30px;height:30px;border-radius:8px;background:${iconBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-${icon}" style="font-size:14px;color:${iconColor};" aria-hidden="true"></i></div>
-    <div style="flex:1;"><div style="font-size:11px;font-weight:500;">${name}</div><div style="font-size:10px;color:var(--text3);">${sub}</div>
-    <div style="height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:3px;"><div style="height:100%;border-radius:2px;width:${progW};background:${progColor};"></div></div></div>
-    <div style="font-size:13px;font-weight:500;color:${pctColor};">${pct}</div>
+function mbChip(label, active=false, onclick='') {
+  return `<button style="font-size:11px;padding:4px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;cursor:pointer;${active?MB_CHIP_ON:MB_CHIP}" onclick="${onclick}">${label}</button>`;
+}
+function mbHdBtn(icon, round=true) {
+  return `<div style="width:28px;height:28px;border-radius:${round?'50%':'8px'};background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;flex-shrink:0;"><i class="ti ti-${icon}" aria-hidden="true"></i></div>`;
+}
+function mbCard(hd, body) {
+  return `<div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;">${hd?`<div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:10px;">${hd}</div>`:''}${body}</div>`;
+}
+function mbRow(iconBg, iconColor, icon, name, sub, rightHtml, prog='', progColor='') {
+  return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);">
+    <div style="width:34px;height:34px;border-radius:9px;background:${iconBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-${icon}" style="font-size:16px;color:${iconColor};" aria-hidden="true"></i></div>
+    <div style="flex:1;"><div style="font-size:13px;font-weight:500;color:var(--text);">${name}</div><div style="font-size:11px;color:var(--text2);margin-top:1px;">${sub}</div>${prog?`<div style="height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:4px;"><div style="height:100%;border-radius:2px;width:${prog};background:${progColor};"></div></div>`:''}</div>
+    ${rightHtml}
   </div>`;
 }
 function mbMetric(lbl, val, valColor='') {
-  return `<div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:8px;padding:9px 11px;">
-    <div style="font-size:10px;color:var(--text2);margin-bottom:3px;">${lbl}</div>
-    <div style="font-size:20px;font-weight:600;${valColor?'color:'+valColor+';':''}">${val}</div>
+  return `<div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:10px;padding:10px 12px;">
+    <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">${lbl}</div>
+    <div style="font-size:22px;font-weight:500;${valColor?'color:'+valColor+';':''}">${val}</div>
+  </div>`;
+}
+function mbBadge(txt, cls) {
+  const map={ok:['#EAF3DE','#27500A'],low:['#FAEEDA','#633806'],crit:['#FCEBEB','#791F1F'],open:['#FAEEDA','#633806'],wait:['#E6F1FB','#0C447C'],done:['#EAF3DE','#27500A']};
+  const [bg,color]=map[cls]||map.ok;
+  return `<span style="display:inline-block;font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:${bg};color:${color};">${txt}</span>`;
+}
+function mbBn(active) {
+  const items=[['layout-dashboard','ภาพรวม','overview'],['packages','สินค้า','inventory'],['transfer-out','เบิก','withdraw'],['file-invoice','PR','pr'],['building','โครงการ','projects']];
+  return `<div style="background:var(--bg2);border-top:0.5px solid var(--border);display:flex;padding:6px 0 max(10px,env(safe-area-inset-bottom));flex-shrink:0;">
+    ${items.map(([ic,lbl,id])=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:${active===id?'#534AB7':'var(--text3)'};cursor:pointer;" onclick="goTabMobile('${id}')">
+      <i class="ti ti-${ic}" style="font-size:22px;" aria-hidden="true"></i>${lbl}
+      ${active===id?`<div style="width:4px;height:4px;border-radius:50%;background:#534AB7;"></div>`:''}
+    </div>`).join('')}
   </div>`;
 }
 
 function renderOverviewMobile() {
-  const openPR = prList.filter(p => p.status==='open').length;
-  const todayW = withdrawLog.filter(l => {
+  const openPR = prList.filter(p=>p.status==='open').length;
+  const todayW = withdrawLog.filter(l=>{
     if (!l.createdAt) return false;
-    const d = l.createdAt.toDate ? l.createdAt.toDate() : new Date();
-    return d.toDateString() === new Date().toDateString();
+    const d=l.createdAt.toDate?l.createdAt.toDate():new Date();
+    return d.toDateString()===new Date().toDateString();
   }).length;
-  const critItems = PRODUCTS.filter(p => getStatus(p.id).cls==='b-crit');
-  const alertHtml = critItems.length ? `
-    <div style="background:#FCEBEB;border-radius:8px;padding:9px 11px;display:flex;gap:7px;margin-bottom:8px;">
-      <i class="ti ti-alert-triangle" style="font-size:16px;color:#A32D2D;flex-shrink:0;margin-top:1px;" aria-hidden="true"></i>
-      <div><div style="font-size:11px;font-weight:500;color:#791F1F;">สต็อควิกฤต ${critItems.length} รายการ</div>
-      <div style="font-size:10px;color:#A32D2D;margin-top:2px;">${critItems.map(p=>p.name).join(' · ')}</div></div>
-    </div>` : '';
+  const critItems = PRODUCTS.filter(p=>getStatus(p.id).cls==='b-crit');
+  const alertHtml = critItems.length?`
+    <div style="background:#FCEBEB;border-radius:10px;padding:10px 13px;display:flex;gap:9px;align-items:flex-start;margin-bottom:10px;">
+      <i class="ti ti-alert-triangle" style="font-size:18px;color:#A32D2D;flex-shrink:0;margin-top:1px;" aria-hidden="true"></i>
+      <div><div style="font-size:13px;font-weight:500;color:#791F1F;">สต็อควิกฤต ${critItems.length} รายการ</div>
+      <div style="font-size:11px;color:#A32D2D;margin-top:2px;">${critItems.map(p=>p.name).join(' · ')}</div></div>
+    </div>`:'';
   const recentLog = withdrawLog.slice(0,3).map(l=>`
-    <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid var(--border);font-size:10px;">
+    <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:12px;">
       <span>${l.project||'—'}</span><span style="color:var(--text2);">${l.product||'—'} · ${l.qty||0} ชิ้น</span>
-    </div>`).join('') || `<div style="font-size:10px;color:var(--text3);padding:6px 0;">ยังไม่มีการเบิก</div>`;
+    </div>`).join('')||`<div style="font-size:12px;color:var(--text3);padding:8px 0;">ยังไม่มีการเบิก</div>`;
+
+  const hd = mbHd('AP Stock','สวัสดี คุณสรพงศ์',`<div style="position:relative;">${mbHdBtn('bell')}<div style="width:7px;height:7px;background:#E24B4A;border-radius:50%;position:absolute;top:2px;right:2px;border:1.5px solid ${MB_HD};"></div></div>`);
+
   document.getElementById('main-content').innerHTML = `
-    ${alertHtml}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
-      ${mbMetric('<i class="ti ti-building"></i> โครงการ','153')}
-      ${mbMetric('<i class="ti ti-file-invoice"></i> PR เปิด',openPR,'#E24B4A')}
-      ${mbMetric('<i class="ti ti-packages"></i> สินค้า','9')}
-      ${mbMetric('<i class="ti ti-transfer-out"></i> เบิกวันนี้',todayW)}
+    ${hd}
+    <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1;">
+      ${alertHtml}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        ${mbMetric('โครงการ','153')}
+        ${mbMetric('PR เปิด',openPR,'#E24B4A')}
+        ${mbMetric('สินค้า','9')}
+        ${mbMetric('เบิกวันนี้',todayW)}
+      </div>
+      ${mbCard('โครงการล่าสุด',`
+        ${mbRow('#EEEDFE','#534AB7','diamond','The Palazzo Pinklao','Premium · 85 ยูนิต',`<div style="text-align:right;"><div style="font-size:14px;font-weight:500;color:#534AB7;">92%</div>${mbBadge('พร้อม','ok')}</div>`,'92%','#534AB7')}
+        ${mbRow('#FCEBEB','#A32D2D','alert-circle','ADDRESS Samrong','Premium · 140 ยูนิต',`<div style="text-align:right;"><div style="font-size:14px;font-weight:500;color:#E24B4A;">38%</div>${mbBadge('วิกฤต','crit')}</div>`,'38%','#E24B4A')}
+        ${mbRow('#FAEEDA','#BA7517','home','Life Ladprao Valley','กลาง · 580 ยูนิต',`<div style="text-align:right;"><div style="font-size:14px;font-weight:500;color:#BA7517;">55%</div>${mbBadge('ต่ำ','low')}</div>`,'55%','#BA7517')}
+        <div style="border:none;height:0;"></div>
+      `)}
+      <div style="background:#EEEDFE;border-radius:10px;padding:10px 13px;">
+        <div style="font-size:11px;font-weight:500;color:#3C3489;margin-bottom:4px;"><i class="ti ti-sparkles" aria-hidden="true"></i> AI แนะนำวันนี้</div>
+        <div style="font-size:12px;color:#534AB7;line-height:1.6;">Y02-Knob Q3 ต้องการ 1,151 ชิ้น — ควรสั่งภายใน 2 สัปดาห์</div>
+      </div>
+      ${mbCard('<i class="ti ti-transfer-out" aria-hidden="true"></i> เบิกล่าสุด',recentLog)}
     </div>
-    ${mbCard('<i class="ti ti-building" aria-hidden="true"></i> โครงการล่าสุด',`
-      ${mbProjRow('diamond','#EEEDFE','#534AB7','The Palazzo Pinklao','Premium · 85 ยูนิต','92%','#534AB7','#534AB7','92%')}
-      ${mbProjRow('alert-circle','#FCEBEB','#A32D2D','THE ADDRESS Samrong','Premium · 140 ยูนิต','38%','#E24B4A','#E24B4A','38%')}
-      ${mbProjRow('home','#FAEEDA','#BA7517','Life Ladprao Valley','กลาง · 580 ยูนิต','55%','#BA7517','#BA7517','55%')}
-    `)}
-    <div style="background:#EEEDFE;border-radius:8px;padding:9px 11px;">
-      <div style="font-size:10px;font-weight:500;color:#3C3489;margin-bottom:3px;display:flex;align-items:center;gap:3px;"><i class="ti ti-sparkles" aria-hidden="true"></i> AI แนะนำวันนี้</div>
-      <div style="font-size:10px;color:#534AB7;line-height:1.55;">Pleno/Town Q3 ต้องการ Y02-Knob 1,151 ชิ้น — ควรสั่งภายใน 2 สัปดาห์</div>
-    </div>
-    ${mbCard('<i class="ti ti-transfer-out" aria-hidden="true"></i> เบิกล่าสุด', recentLog)}`;
+    ${mbBn('overview')}`;
 }
 
 function renderInventoryMobile() {
-  const rows = PRODUCTS.map(p => {
-    const qty = stockData[p.id]?.qty ?? '...';
-    const s = getStatus(p.id);
-    const colors = {ok:['#EAF3DE','#27500A'],low:['#FAEEDA','#633806'],crit:['#FCEBEB','#A32D2D']};
-    const [ibg,ic] = colors[s.cls.replace('b-','')] || colors.ok;
-    const qtyColor = s.cls==='b-crit'?'color:#E24B4A;':s.cls==='b-low'?'color:#BA7517;':'';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--border);" data-v="${p.vendor==='CIT'?'cit':'other'}">
-      <div style="width:30px;height:30px;border-radius:7px;background:${ibg};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-lock" style="font-size:14px;color:${ic};" aria-hidden="true"></i></div>
-      <div style="flex:1;"><div style="font-size:11px;font-weight:500;">${p.name}</div><div style="font-size:10px;color:var(--text3);">${p.vendor} · ${p.brand}</div></div>
-      <div style="text-align:right;"><div style="font-size:13px;font-weight:500;${qtyColor}">${qty}</div><div style="font-size:9px;color:var(--text3);">min ${p.min}</div><span style="display:inline-block;font-size:9px;font-weight:500;padding:1px 6px;border-radius:999px;background:${ibg};color:${ic};">${s.txt}</span></div>
+  const rows = PRODUCTS.map(p=>{
+    const qty=stockData[p.id]?.qty??'...';
+    const s=getStatus(p.id);
+    const cmap={ok:['#EAF3DE','#27500A'],low:['#FAEEDA','#633806'],crit:['#FCEBEB','#A32D2D']};
+    const [ibg,ic]=cmap[s.cls.replace('b-','')]||cmap.ok;
+    const qc=s.cls==='b-crit'?'color:#E24B4A;':s.cls==='b-low'?'color:#BA7517;':'';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);" data-v="${p.vendor==='CIT'?'cit':'other'}">
+      <div style="width:34px;height:34px;border-radius:9px;background:${ibg};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-lock" style="font-size:16px;color:${ic};" aria-hidden="true"></i></div>
+      <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${p.name}</div><div style="font-size:11px;color:var(--text2);margin-top:1px;">${p.vendor} · ${p.brand}</div></div>
+      <div style="text-align:right;"><div style="font-size:16px;font-weight:500;${qc}">${qty}</div><div style="font-size:10px;color:var(--text3);">min ${p.min}</div>${mbBadge(s.txt,s.cls.replace('b-',''))}</div>
     </div>`;
   }).join('');
+
+  const hd = mbHd('สินค้าคงคลัง','9 รายการ',mbHdBtn('search',false),
+    mbChip('ทั้งหมด',true,"filterInvMobile(this,'all')")+mbChip('Kudos by CIT',false,"filterInvMobile(this,'cit')"));
+
   document.getElementById('main-content').innerHTML = `
-    <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:2px;margin-bottom:2px;">
-      <button class="chip active" onclick="filterInvMobile(this,'all')">ทั้งหมด</button>
-      <button class="chip" onclick="filterInvMobile(this,'cit')">Kudos by CIT</button>
+    ${hd}
+    <div style="padding:12px 14px;overflow-y:auto;flex:1;">
+      ${mbCard('',`<div id="inv-body-mb">${rows}</div>`)}
     </div>
-    ${mbCard('',`<div id="inv-body-mb">${rows}</div>`)}`;
+    ${mbBn('inventory')}`;
 }
 window.filterInvMobile = function(btn,v) {
-  btn.closest('div').querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
-  btn.classList.add('active');
+  btn.closest('div').querySelectorAll('button[onclick*="filterInvMobile"]').forEach(c=>{c.style.cssText=`font-size:11px;padding:4px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;cursor:pointer;${MB_CHIP}`;});
+  btn.style.cssText=`font-size:11px;padding:4px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;cursor:pointer;${MB_CHIP_ON}`;
   document.querySelectorAll('#inv-body-mb > div').forEach(d=>{d.style.display=(v==='all'||d.dataset.v===v)?'':'none';});
 };
 
 function renderWithdrawMobile() {
   const logRows = withdrawLog.map(l=>`
-    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:10px;" data-brand="${l.brand||''}">
-      <div><div style="font-weight:500;">${l.project||'—'}</div><div style="color:var(--text2);">${fmtDate(l.createdAt)}</div></div>
-      <div style="text-align:right;"><div style="font-weight:500;">${l.product||'—'}</div><div style="color:var(--text2);">${l.qty||0} ชิ้น</div></div>
-    </div>`).join('') || `<div style="font-size:11px;color:var(--text3);padding:10px 0;text-align:center;">ยังไม่มีการเบิก</div>`;
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border);" data-brand="${l.brand||''}">
+      <div><div style="font-size:13px;font-weight:500;">${l.project||'—'}</div><div style="font-size:11px;color:var(--text2);">${fmtDate(l.createdAt)}</div></div>
+      <div style="text-align:right;"><div style="font-size:13px;font-weight:500;">${l.product||'—'}</div><div style="font-size:11px;color:var(--text2);">${l.qty||0} ชิ้น</div></div>
+    </div>`).join('')||`<div style="font-size:12px;color:var(--text3);padding:10px 0;text-align:center;">ยังไม่มีการเบิก</div>`;
+
+  const hd = mbHd('เบิกสินค้า','ค้นหาโครงการ','','','เช่น 4137 หรือ Pleno สุขสวัสดิ์...');
+
   document.getElementById('main-content').innerHTML = `
-    ${mbCard('',`
-      <div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:6px;">ค้นหาโครงการ</div>
-      <div style="position:relative;margin-bottom:8px;">
-        <i class="ti ti-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--text3);" aria-hidden="true"></i>
-        <input class="search-input" id="wd-search-mb" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off" style="padding-left:30px;">
-        <div class="search-dropdown" id="wd-dropdown"></div>
-      </div>
-      <div id="wd-selected" style="font-size:11px;color:#534AB7;margin-bottom:4px;min-height:14px;"></div>
-      <div id="wd-items" style="display:none;">
-        <div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:6px;padding-bottom:5px;border-bottom:0.5px solid var(--border);">สินค้า — map อัตโนมัติ</div>
-        <div id="wd-item-list"></div>
-        <div style="margin-top:8px;display:flex;gap:6px;">
-          <input class="form-input" id="wd-note" placeholder="หมายเหตุ" style="flex:1;">
-          <button class="tb-btn primary" onclick="confirmWithdraw()" style="white-space:nowrap;"><i class="ti ti-check" aria-hidden="true"></i> ยืนยัน</button>
+    ${hd}
+    <div style="padding:12px 14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px;">
+      ${mbCard('',`
+        <div style="position:relative;margin-bottom:10px;">
+          <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);" aria-hidden="true"></i>
+          <input class="search-input" id="wd-search-mb" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off" style="padding-left:34px;height:36px;font-size:13px;">
+          <div class="search-dropdown" id="wd-dropdown"></div>
         </div>
-      </div>
-      <div id="wd-placeholder" style="font-size:11px;color:var(--text3);padding:14px 0;text-align:center;">
-        <i class="ti ti-search" style="display:block;font-size:24px;margin-bottom:6px;" aria-hidden="true"></i>ค้นหาโครงการเพื่อเริ่มเบิก
-      </div>
-    `)}
-    ${mbCard('<i class="ti ti-history" aria-hidden="true"></i> Log การเบิก',`
-      <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;margin-bottom:6px;">
-        <button class="chip active" onclick="filterLogMb(this,'all')">ทั้งหมด</button>
-        <button class="chip" onclick="filterLogMb(this,'pleno')">Pleno</button>
-        <button class="chip" onclick="filterLogMb(this,'grande')">Grande</button>
-        <button class="chip" onclick="filterLogMb(this,'bkm')">BKM</button>
-      </div>
-      <div id="log-body-mb">${logRows}</div>
-    `)}`;
+        <div id="wd-selected" style="font-size:12px;color:#534AB7;margin-bottom:6px;min-height:16px;"></div>
+        <div id="wd-items" style="display:none;">
+          <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px;padding-bottom:6px;border-bottom:0.5px solid var(--border);">สินค้า — map อัตโนมัติ</div>
+          <div id="wd-item-list"></div>
+          <div style="margin-top:10px;display:flex;gap:8px;">
+            <input class="form-input" id="wd-note" placeholder="หมายเหตุ" style="flex:1;height:36px;font-size:13px;">
+            <button class="tb-btn primary" onclick="confirmWithdraw()" style="white-space:nowrap;height:36px;font-size:13px;"><i class="ti ti-check" aria-hidden="true"></i> ยืนยัน</button>
+          </div>
+        </div>
+        <div id="wd-placeholder" style="font-size:12px;color:var(--text3);padding:16px 0;text-align:center;">
+          <i class="ti ti-search" style="display:block;font-size:28px;margin-bottom:8px;" aria-hidden="true"></i>ค้นหาโครงการเพื่อเริ่มเบิก
+        </div>
+      `)}
+      ${mbCard('<i class="ti ti-history" aria-hidden="true"></i> Log การเบิก',`
+        <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;">
+          <button style="font-size:11px;padding:4px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;cursor:pointer;${MB_CHIP_ON}" onclick="filterLogMb(this,'all')">ทั้งหมด</button>
+          <button style="font-size:11px;padding:4px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;cursor:pointer;${MB_CHIP}" onclick="filterLogMb(this,'pleno')">Pleno</button>
+          <button style="font-size:11px;padding:4px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;cursor:pointer;${MB_CHIP}" onclick="filterLogMb(this,'grande')">Grande</button>
+          <button style="font-size:11px;padding:4px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;cursor:pointer;${MB_CHIP}" onclick="filterLogMb(this,'bkm')">BKM</button>
+        </div>
+        <div id="log-body-mb">${logRows}</div>
+      `)}
+    </div>
+    ${mbBn('withdraw')}`;
 }
 window.filterLogMb = function(btn,brand) {
-  btn.closest('.chip-row').querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
-  btn.classList.add('active');
+  btn.closest('div').querySelectorAll('button[onclick*="filterLogMb"]').forEach(c=>{c.style.cssText=`font-size:11px;padding:4px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;cursor:pointer;${MB_CHIP}`;});
+  btn.style.cssText=`font-size:11px;padding:4px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;cursor:pointer;${MB_CHIP_ON}`;
   document.querySelectorAll('#log-body-mb > div').forEach(d=>{d.style.display=(brand==='all'||d.dataset.brand===brand)?'':'none';});
 };
 
 function renderPRMobile() {
-  const filtered = prFilter==='all'?prList:prList.filter(p=>p.status===prFilter);
-  const rows = filtered.map(p=>{
-    const s = STATUS_MAP[p.status]||STATUS_MAP.open;
-    const nxt = NEXT_STATUS[p.status];
-    const linesHtml = (p.lines||[]).map(l=>`<span style="font-size:10px;color:var(--text2);">${l.product} · ${l.qty} ชิ้น</span>`).join('<br>');
-    const btnHtml = nxt ? `<button class="edit-btn" onclick="updatePR('${p.docId}','${nxt}')" style="margin-top:5px;">${nxt==='wait'?'→ รอของเข้า':'→ เข้าคลัง'}</button>` : `<span style="font-size:10px;color:var(--text3);">✓</span>`;
-    return `<div style="display:flex;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--border);">
-      <div style="flex:1;">
-        <div style="font-size:11px;font-weight:500;color:#534AB7;">${p.prNum||'—'}</div>
-        <div style="font-size:10px;color:var(--text2);margin-top:1px;">${p.project||'—'} · ${p.vendor||'—'}</div>
-        <div style="margin-top:2px;">${linesHtml}</div>
-      </div>
-      <div style="text-align:right;flex-shrink:0;">
-        <span style="display:inline-block;font-size:9px;font-weight:500;padding:2px 7px;border-radius:999px;" class="badge ${s.cls}">${s.txt}</span>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px;">${fmtDate(p.createdAt)}</div>
-        ${btnHtml}
-      </div>
+  const filtered=prFilter==='all'?prList:prList.filter(p=>p.status===prFilter);
+  const rows=filtered.map(p=>{
+    const s=STATUS_MAP[p.status]||STATUS_MAP.open;
+    const nxt=NEXT_STATUS[p.status];
+    const linesHtml=(p.lines||[]).map(l=>`<div style="font-size:11px;color:var(--text2);">${l.product} · ${l.qty} ชิ้น</div>`).join('');
+    const btnHtml=nxt?`<button class="edit-btn" onclick="updatePR('${p.docId}','${nxt}')" style="margin-top:6px;font-size:11px;">${nxt==='wait'?'→ รอของเข้า':'→ เข้าคลัง'}</button>`:`<span style="font-size:11px;color:var(--text3);">✓</span>`;
+    return `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);">
+      <div style="flex:1;"><div style="font-size:13px;font-weight:500;color:#534AB7;">${p.prNum||'—'}</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:2px;">${p.project||'—'} · ${p.vendor||'—'}</div>
+      <div style="margin-top:3px;">${linesHtml}</div></div>
+      <div style="text-align:right;flex-shrink:0;">${mbBadge(s.txt,s.cls.replace('b-',''))}
+      <div style="font-size:10px;color:var(--text3);margin-top:2px;">${fmtDate(p.createdAt)}</div>${btnHtml}</div>
     </div>`;
-  }).join('') || `<div style="font-size:11px;color:var(--text3);padding:12px 0;text-align:center;">ไม่มีรายการ</div>`;
+  }).join('')||`<div style="font-size:12px;color:var(--text3);padding:14px 0;text-align:center;">ไม่มีรายการ</div>`;
+
+  const chipBar=[['all','ทั้งหมด'],['open','เปิด PR'],['wait','รอของเข้า'],['done','เข้าคลัง']]
+    .map(([v,l])=>mbChip(l,prFilter===v,`setPRFilterMb('${v}')`)).join('');
+  const hd=mbHd('PR Tracking','รายการ PR',mbHdBtn('plus',false),chipBar);
 
   document.getElementById('main-content').innerHTML = `
-    <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:2px;margin-bottom:2px;">
-      <button class="chip ${prFilter==='all'?'active':''}" onclick="setPRFilterMb('all')">ทั้งหมด</button>
-      <button class="chip ${prFilter==='open'?'active':''}" onclick="setPRFilterMb('open')">เปิด PR</button>
-      <button class="chip ${prFilter==='wait'?'active':''}" onclick="setPRFilterMb('wait')">รอของเข้า</button>
-      <button class="chip ${prFilter==='done'?'active':''}" onclick="setPRFilterMb('done')">เข้าคลัง</button>
+    ${hd}
+    <div style="padding:12px 14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px;">
+      ${mbCard('',rows)}
+      ${mbCard('<i class="ti ti-plus" style="color:#534AB7;" aria-hidden="true"></i> เปิด PR ใหม่',`
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+          <div><div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;">เลขที่ PR</div>
+            <input class="form-input" id="pr-num" placeholder="เช่น PR-2026-042" style="height:36px;font-size:13px;"></div>
+          <div><div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;">โครงการ</div>
+            <select class="form-select" id="pr-project" style="height:36px;font-size:13px;">${ALL_PROJECTS.map(p=>`<option value="${p.id}|${p.name}">${p.id} · ${p.name}</option>`).join('')}</select></div>
+          <div><div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;">Vendor</div>
+            <select class="form-select" id="pr-vendor" style="height:36px;font-size:13px;"><option>CIT · 09-0640-7822</option><option>Poontana · 08-3514-4498</option><option>Karat</option></select></div>
+        </div>
+        <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;">รายการสินค้า</div>
+        <div id="pr-lines"></div>
+        <button class="edit-btn" onclick="addPRLine()" style="margin-top:6px;display:flex;align-items:center;gap:4px;font-size:12px;"><i class="ti ti-plus" aria-hidden="true"></i> เพิ่มสินค้า</button>
+        <button class="tb-btn primary" style="margin-top:10px;width:100%;justify-content:center;height:38px;font-size:13px;" onclick="submitPR()"><i class="ti ti-file-invoice" aria-hidden="true"></i> เปิด PR</button>
+      `)}
     </div>
-    ${mbCard('',rows)}
-    ${mbCard('<i class="ti ti-plus" style="color:#534AB7;" aria-hidden="true"></i> เปิด PR ใหม่',`
-      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:8px;">
-        <div><div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:3px;">เลขที่ PR</div>
-          <input class="form-input" id="pr-num" placeholder="เช่น PR-2026-042"></div>
-        <div><div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:3px;">โครงการ</div>
-          <select class="form-select" id="pr-project">${ALL_PROJECTS.map(p=>`<option value="${p.id}|${p.name}">${p.id} · ${p.name}</option>`).join('')}</select></div>
-        <div><div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:3px;">Vendor</div>
-          <select class="form-select" id="pr-vendor"><option>CIT · 09-0640-7822</option><option>Poontana · 08-3514-4498</option><option>Karat</option></select></div>
-      </div>
-      <div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:5px;">รายการสินค้า</div>
-      <div id="pr-lines"></div>
-      <button class="edit-btn" onclick="addPRLine()" style="margin-top:5px;display:flex;align-items:center;gap:4px;"><i class="ti ti-plus" aria-hidden="true"></i> เพิ่มสินค้า</button>
-      <button class="tb-btn primary" style="margin-top:9px;width:100%;justify-content:center;" onclick="submitPR()"><i class="ti ti-file-invoice" aria-hidden="true"></i> เปิด PR</button>
-    `)}`;
+    ${mbBn('pr')}`;
   addPRLine();
 }
 window.setPRFilterMb = function(s) { prFilter=s; renderPRMobile(); };
 
-window.renderProjectsMobile = function renderProjectsMobile() {
-  const rows = Object.entries(BRAND_DATA).map(([key,d])=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border);cursor:pointer;" onclick="showBrandMobile('${key}')">
-      <div style="flex:1;"><span class="badge b-${key==='pleno'?'pleno':key==='grande'?'grande':key==='bkm'||key==='bkme'||key==='bkmc'?'bkme':key==='api'?'api':'dist'}">${d.label}</span>
-      <div style="font-size:10px;color:var(--text2);margin-top:3px;">${d.projects.length} โครงการ · ${d.projects.reduce((s,p)=>s+parseInt(p[3]||0),0).toLocaleString()} ยูนิต</div></div>
-      <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text3);" aria-hidden="true"></i>
-    </div>`).join('');
-  document.getElementById('main-content').innerHTML = mbCard('',rows);
-}
-window.showBrandMobile = function(key) {
-  const d = BRAND_DATA[key];
-  const rows = d.projects.map(p=>`
-    <div style="padding:8px 0;border-bottom:0.5px solid var(--border);">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div><div style="font-size:11px;font-weight:500;">${p[1]}</div>
-        <div style="font-size:10px;color:var(--text2);margin-top:1px;">Plant ${p[0]} · Seg ${p[2]} · ${p[3]} ยูนิต</div></div>
-        <div style="text-align:right;flex-shrink:0;margin-left:8px;">
-          <div style="font-size:11px;font-weight:500;">${p[5]}</div>
-          <div style="font-size:9px;color:var(--text3);">FC/ปี</div>
-        </div>
-      </div>
-    </div>`).join('');
+window.renderProjectsMobile = function() {
+  const brandKeys=['all','pleno','grande','bkm','bkme','api','dist'];
+  const brandLabels=['ทั้งหมด','Pleno','Grande','BKM','BKM Edition','Apitown','District'];
+  const chipBar=brandLabels.map((l,i)=>mbChip(l,i===0,`filterProjMobile(this,'${brandKeys[i]}')`)).join('');
+  const hd=mbHd('โครงการ','153 โครงการ · 7 Brands',mbHdBtn('search',false),chipBar);
+
+  const allProjs=Object.entries(BRAND_DATA).flatMap(([key,d])=>
+    d.projects.map(p=>({key,d,p}))
+  );
+  const rows=allProjs.map(({key,d,p})=>{
+    const bmap={pleno:['#EEEDFE','#534AB7'],grande:['#EEEDFE','#534AB7'],bkm:['#E1F5EE','#0F6E56'],bkme:['#FAEEDA','#633806'],bkmc:['#FAECE7','#712B13'],api:['#EAF3DE','#3B6D11'],dist:['#F1EFE8','#444441']};
+    const [ibg,ic]=bmap[key]||bmap.pleno;
+    const pct=parseFloat(p[5]||0);
+    const progW=Math.round(pct/Math.max(...allProjs.map(x=>parseFloat(x.p[5]||0)))*100)+'%';
+    return {key, html:`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);">
+      <div style="width:34px;height:34px;border-radius:9px;background:${ibg};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-home" style="font-size:16px;color:${ic};" aria-hidden="true"></i></div>
+      <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${p[1]}</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:1px;">${p[0]} · ${p[3]} ยูนิต · <span style="background:${ibg};color:${ic};font-size:10px;padding:1px 6px;border-radius:999px;">${d.label}</span></div>
+      <div style="height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:4px;"><div style="height:100%;width:${progW};background:${ic};border-radius:2px;"></div></div></div>
+      <div style="font-size:14px;font-weight:500;color:${ic};">${p[5]}</div>
+    </div>`};
+  });
+
   document.getElementById('main-content').innerHTML = `
-    <button class="back-btn" onclick="window.renderProjectsMobile()"><i class="ti ti-arrow-left" aria-hidden="true"></i> กลับ Brand level</button>
-    ${mbCard(`<span class="badge b-${key==='pleno'?'pleno':key==='grande'?'grande':key==='bkm'||key==='bkme'||key==='bkmc'?'bkme':key==='api'?'api':'dist'}">${d.label}</span> · ${d.lock}`, rows)}`;
+    ${hd}
+    <div style="padding:12px 14px;overflow-y:auto;flex:1;">
+      ${mbCard('',`<div id="proj-rows-mb">${rows.map(({key,html})=>`<div data-brand="${key}">${html}</div>`).join('')}</div>`)}
+    </div>
+    ${mbBn('projects')}`;
+};
+window.filterProjMobile = function(btn, brand) {
+  btn.closest('div').querySelectorAll('button[onclick*="filterProjMobile"]').forEach(c=>{
+    c.style.cssText=`font-size:11px;padding:4px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;cursor:pointer;${MB_CHIP}`;
+  });
+  btn.style.cssText=`font-size:11px;padding:4px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;cursor:pointer;${MB_CHIP_ON}`;
+  document.querySelectorAll('#proj-rows-mb > div').forEach(d=>{
+    d.style.display=(brand==='all'||d.dataset.brand===brand)?'':'none';
+  });
 };
 
 // handle resize — re-render current tab when crossing breakpoint
