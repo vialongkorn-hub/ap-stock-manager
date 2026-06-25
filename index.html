@@ -119,8 +119,8 @@ tr:hover td{background:var(--bg3);}
 @keyframes spin{to{transform:rotate(360deg);}}
 
 /* ── EDIT-ONLY LOCK ── */
-.edit-only{pointer-events:none;opacity:0.35;user-select:none;transition:opacity .15s;}
-.app-edit-mode .edit-only{pointer-events:auto;opacity:1;user-select:auto;}
+[data-edit]{transition:opacity .15s;}
+[data-edit]:disabled{opacity:0.35;cursor:not-allowed;}
 
 @media(max-width:768px){
   .sidebar{display:none;}
@@ -243,10 +243,15 @@ window.exitEditMode = function() {
   renderTab(currentTab);
 };
 
-function updateEditModeUI() {
-  // toggle CSS class บน body — ควบคุม .edit-only ทั้งหมดในครั้งเดียว
-  document.body.classList.toggle('app-edit-mode', editMode);
+function applyEditState() {
+  document.querySelectorAll('[data-edit]').forEach(el => {
+    el.disabled = !editMode;
+    el.style.opacity = editMode ? '1' : '0.35';
+    el.style.cursor = editMode ? '' : 'not-allowed';
+  });
+}
 
+function updateEditModeUI() {
   // desktop topbar button
   const btn = document.getElementById('edit-mode-btn');
   if (btn) {
@@ -266,6 +271,7 @@ function updateEditModeUI() {
   }
   // mobile: re-render เพื่ออัปเดต lock icon ใน header
   if (isMobile()) renderTab(currentTab);
+  else applyEditState();
 }
 
 // helper — lock button สำหรับ mobile header
@@ -395,6 +401,8 @@ function renderTab(id) {
       case 'spec': renderSpec(); break;
     }
   }
+  // apply disabled state to all [data-edit] elements after every render
+  setTimeout(applyEditState, 0);
 }
 
 function getStatus(id) {
@@ -502,7 +510,7 @@ function renderInventory() {
       <td id="inv-qty-${p.id}">${qty}</td>
       <td>${p.min}</td>
       <td><span class="badge ${s.cls}" id="inv-st-${p.id}">${s.txt}</span></td>
-      <td><button class="edit-btn edit-only" id="inv-btn-${p.id}" onclick="editStock('${p.id}')">แก้ไข</button></td>
+      <td><button class="edit-btn" data-edit id="inv-btn-${p.id}" onclick="editStock('${p.id}')">แก้ไข</button></td>
     </tr>`;
   }).join('');
   document.getElementById('main-content').innerHTML = `
@@ -526,12 +534,12 @@ window.editStock = async function(id) {
   const cell = document.getElementById('inv-qty-'+id);
   if (btn.textContent==='แก้ไข') {
     cell.innerHTML = `<input class="qty-input" id="inp-${id}" type="number" value="${stockData[id]?.qty??0}" min="0">`;
-    btn.textContent='บันทึก'; btn.className='save-btn edit-only';
+    btn.textContent='บันทึก'; btn.className='save-btn'; btn.setAttribute('data-edit','');
   } else {
     const val = parseInt(document.getElementById('inp-'+id)?.value)||0;
     const docId = stockData[id]?.docId;
     if (docId) await updateDoc(doc(db,'stock',docId),{qty:val,updatedAt:serverTimestamp()});
-    btn.textContent='แก้ไข'; btn.className='edit-btn edit-only';
+    btn.textContent='แก้ไข'; btn.className='edit-btn'; btn.setAttribute('data-edit','');
   }
 };
 
@@ -551,7 +559,7 @@ function renderWithdraw() {
           <div class="form-label">ค้นหาโครงการ (พิมพ์รหัส หรือชื่อ)</div>
           <div class="search-wrap">
             <i class="ti ti-search search-icon"></i>
-            <input class="search-input edit-only" id="wd-search" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off">
+            <input class="search-input" data-edit id="wd-search" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off">
             <div class="search-dropdown" id="wd-dropdown"></div>
           </div>
           <div id="wd-selected" style="font-size:11px;color:var(--purple);margin-top:4px;min-height:16px;"></div>
@@ -561,7 +569,7 @@ function renderWithdraw() {
           <div id="wd-item-list"></div>
           <div style="margin-top:10px;display:flex;gap:8px;">
             <input class="form-input" id="wd-note" placeholder="หมายเหตุ (ถ้ามี)" style="flex:1;">
-            <button class="tb-btn primary edit-only" onclick="confirmWithdraw()"><i class="ti ti-check"></i> ยืนยันเบิก</button>
+            <button class="tb-btn primary" data-edit onclick="confirmWithdraw()"><i class="ti ti-check"></i> ยืนยันเบิก</button>
           </div>
         </div>
         <div id="wd-placeholder" style="font-size:11px;color:var(--text3);padding:20px 0;text-align:center;">
@@ -652,25 +660,25 @@ function renderPRTab() {
     const s = STATUS_MAP[p.status]||STATUS_MAP.open;
     const nxt = NEXT_STATUS[p.status];
     const linesHtml = (p.lines||[]).map(l=>`<div style="font-size:10px;color:var(--text2);">${l.product} · <strong>${l.qty}</strong> ชิ้น</div>`).join('');
-    const btnHtml = nxt?`<button class="edit-btn edit-only" onclick="updatePR('${p.docId}','${nxt}')">${nxt==='wait'?'→ รอของเข้า':'→ เข้าคลัง'}</button>`:`<span style="font-size:10px;color:var(--text3);">✓</span>`;
+    const btnHtml = nxt?`<button class="edit-btn" data-edit onclick="updatePR('${p.docId}','${nxt}')">${nxt==='wait'?'→ รอของเข้า':'→ เข้าคลัง'}</button>`:`<span style="font-size:10px;color:var(--text3);">✓</span>`;
     return `<tr><td style="font-size:10px;font-weight:600;color:var(--purple);">${p.prNum||'—'}</td><td style="font-size:11px;">${p.project||'—'}</td><td>${linesHtml}</td><td style="font-size:10px;">${p.vendor||'—'}</td><td style="font-size:10px;">${fmtDate(p.createdAt)}</td><td><span class="badge ${s.cls}">${s.txt}</span></td><td>${btnHtml}</td></tr>`;
   }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px;">ไม่มีรายการ</td></tr>';
   document.getElementById('main-content').innerHTML = `
-    <div class="card edit-only">
+    <div class="card" id="pr-new-card">
       <div class="card-hd"><i class="ti ti-plus" style="color:var(--purple);"></i> เปิด PR ใหม่</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
-        <div class="form-group" style="margin:0;"><div class="form-label">เลขที่ PR</div><input class="form-input" id="pr-num" placeholder="เช่น PR-2026-042"></div>
+        <div class="form-group" style="margin:0;"><div class="form-label">เลขที่ PR</div><input class="form-input" data-edit id="pr-num" placeholder="เช่น PR-2026-042"></div>
         <div class="form-group" style="margin:0;"><div class="form-label">โครงการ</div>
-          <select class="form-select" id="pr-project">${ALL_PROJECTS.map(p=>`<option value="${p.id}|${p.name}">${p.id} · ${p.name}</option>`).join('')}</select>
+          <select class="form-select" data-edit id="pr-project">${ALL_PROJECTS.map(p=>`<option value="${p.id}|${p.name}">${p.id} · ${p.name}</option>`).join('')}</select>
         </div>
         <div class="form-group" style="margin:0;"><div class="form-label">Vendor</div>
-          <select class="form-select" id="pr-vendor"><option>CIT · 09-0640-7822</option><option>Poontana · 08-3514-4498</option><option>Karat</option></select>
+          <select class="form-select" data-edit id="pr-vendor"><option>CIT · 09-0640-7822</option><option>Poontana · 08-3514-4498</option><option>Karat</option></select>
         </div>
       </div>
       <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;">รายการสินค้าใน PR นี้</div>
       <div id="pr-lines"></div>
-      <button class="edit-btn" onclick="addPRLine()" style="margin-top:6px;display:flex;align-items:center;gap:4px;"><i class="ti ti-plus"></i> เพิ่มรายการสินค้า</button>
-      <button class="tb-btn primary" style="margin-top:10px;" onclick="submitPR()"><i class="ti ti-file-invoice"></i> เปิด PR</button>
+      <button class="edit-btn" data-edit onclick="addPRLine()" style="margin-top:6px;display:flex;align-items:center;gap:4px;"><i class="ti ti-plus"></i> เพิ่มรายการสินค้า</button>
+      <button class="tb-btn primary" data-edit style="margin-top:10px;" onclick="submitPR()"><i class="ti ti-file-invoice"></i> เปิด PR</button>
     </div>
     <div class="card">
       <div class="card-hd"><i class="ti ti-file-invoice"></i> รายการ PR</div>
@@ -767,7 +775,7 @@ window.showBrand = function(key) {
   document.getElementById('brand-level').style.display = 'none';
   const det = document.getElementById('proj-detail');
   det.style.display = 'flex';
-  const projRows = d.projects.map(p=>`<tr><td style="font-size:10px;color:var(--text3);">${p[0]}</td><td><strong>${p[1]}</strong></td><td>${p[2]}</td><td>${p[3]}</td><td><input class="qty-input edit-only" placeholder="${p[4]}" style="width:60px;"></td><td>${p[5]}</td><td>${p[6]}</td><td><button class="save-btn edit-only" onclick="this.textContent='✓'">บันทึก</button></td></tr>`).join('');
+  const projRows = d.projects.map(p=>`<tr><td style="font-size:10px;color:var(--text3);">${p[0]}</td><td><strong>${p[1]}</strong></td><td>${p[2]}</td><td>${p[3]}</td><td><input class="qty-input" data-edit placeholder="${p[4]}" style="width:60px;"></td><td>${p[5]}</td><td>${p[6]}</td><td><button class="save-btn" data-edit onclick="this.textContent='✓'">บันทึก</button></td></tr>`).join('');
   det.innerHTML = `
     <button class="back-btn" onclick="window.renderProjects()"><i class="ti ti-arrow-left"></i> กลับ Brand level</button>
     <div class="card">
@@ -948,7 +956,7 @@ function renderWithdrawMobile() {
       ${mbCard('',`
         <div style="position:relative;margin-bottom:10px;">
           <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);" aria-hidden="true"></i>
-          <input class="search-input edit-only" id="wd-search-mb" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off" style="padding-left:34px;height:36px;font-size:13px;">
+          <input class="search-input" data-edit id="wd-search-mb" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off" style="padding-left:34px;height:36px;font-size:13px;">
           <div class="search-dropdown" id="wd-dropdown"></div>
         </div>
         <div id="wd-selected" style="font-size:12px;color:#534AB7;margin-bottom:6px;min-height:16px;"></div>
@@ -957,7 +965,7 @@ function renderWithdrawMobile() {
           <div id="wd-item-list"></div>
           <div style="margin-top:10px;display:flex;gap:8px;">
             <input class="form-input" id="wd-note" placeholder="หมายเหตุ" style="flex:1;height:36px;font-size:13px;">
-            <button class="tb-btn primary edit-only" onclick="confirmWithdraw()" style="white-space:nowrap;height:36px;font-size:13px;"><i class="ti ti-check" aria-hidden="true"></i> ยืนยัน</button>
+            <button class="tb-btn primary" data-edit onclick="confirmWithdraw()" style="white-space:nowrap;height:36px;font-size:13px;"><i class="ti ti-check" aria-hidden="true"></i> ยืนยัน</button>
           </div>
         </div>
         <div id="wd-placeholder" style="font-size:12px;color:var(--text3);padding:16px 0;text-align:center;">
@@ -988,7 +996,7 @@ function renderPRMobile() {
     const s=STATUS_MAP[p.status]||STATUS_MAP.open;
     const nxt=NEXT_STATUS[p.status];
     const linesHtml=(p.lines||[]).map(l=>`<div style="font-size:11px;color:var(--text2);">${l.product} · ${l.qty} ชิ้น</div>`).join('');
-    const btnHtml=nxt?`<button class="edit-btn edit-only" onclick="updatePR('${p.docId}','${nxt}')" style="margin-top:6px;font-size:11px;">${nxt==='wait'?'→ รอของเข้า':'→ เข้าคลัง'}</button>`:`<span style="font-size:11px;color:var(--text3);">✓</span>`;
+    const btnHtml=nxt?`<button class="edit-btn" data-edit onclick="updatePR('${p.docId}','${nxt}')" style="margin-top:6px;font-size:11px;">${nxt==='wait'?'→ รอของเข้า':'→ เข้าคลัง'}</button>`:`<span style="font-size:11px;color:var(--text3);">✓</span>`;
     return `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);">
       <div style="flex:1;"><div style="font-size:13px;font-weight:500;color:#534AB7;">${p.prNum||'—'}</div>
       <div style="font-size:11px;color:var(--text2);margin-top:2px;">${p.project||'—'} · ${p.vendor||'—'}</div>
@@ -1007,18 +1015,18 @@ function renderPRMobile() {
     <div style="padding:12px 14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px;">
       ${mbCard('',rows)}
       ${mbCard('<i class="ti ti-plus" style="color:#534AB7;" aria-hidden="true"></i> เปิด PR ใหม่',`
-        <div class="edit-only" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
           <div><div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;">เลขที่ PR</div>
-            <input class="form-input" id="pr-num" placeholder="เช่น PR-2026-042" style="height:36px;font-size:13px;"></div>
+            <input class="form-input" data-edit id="pr-num" placeholder="เช่น PR-2026-042" style="height:36px;font-size:13px;"></div>
           <div><div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;">โครงการ</div>
-            <select class="form-select" id="pr-project" style="height:36px;font-size:13px;">${ALL_PROJECTS.map(p=>`<option value="${p.id}|${p.name}">${p.id} · ${p.name}</option>`).join('')}</select></div>
+            <select class="form-select" data-edit id="pr-project" style="height:36px;font-size:13px;">${ALL_PROJECTS.map(p=>`<option value="${p.id}|${p.name}">${p.id} · ${p.name}</option>`).join('')}</select></div>
           <div><div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;">Vendor</div>
-            <select class="form-select" id="pr-vendor" style="height:36px;font-size:13px;"><option>CIT · 09-0640-7822</option><option>Poontana · 08-3514-4498</option><option>Karat</option></select></div>
+            <select class="form-select" data-edit id="pr-vendor" style="height:36px;font-size:13px;"><option>CIT · 09-0640-7822</option><option>Poontana · 08-3514-4498</option><option>Karat</option></select></div>
         </div>
         <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;">รายการสินค้า</div>
         <div id="pr-lines"></div>
-        <button class="edit-btn edit-only" onclick="addPRLine()" style="margin-top:6px;display:flex;align-items:center;gap:4px;font-size:12px;"><i class="ti ti-plus" aria-hidden="true"></i> เพิ่มสินค้า</button>
-        <button class="tb-btn primary edit-only" style="margin-top:10px;width:100%;justify-content:center;height:38px;font-size:13px;" onclick="submitPR()"><i class="ti ti-file-invoice" aria-hidden="true"></i> เปิด PR</button>
+        <button class="edit-btn" data-edit onclick="addPRLine()" style="margin-top:6px;display:flex;align-items:center;gap:4px;font-size:12px;"><i class="ti ti-plus" aria-hidden="true"></i> เพิ่มสินค้า</button>
+        <button class="tb-btn primary" data-edit style="margin-top:10px;width:100%;justify-content:center;height:38px;font-size:13px;" onclick="submitPR()"><i class="ti ti-file-invoice" aria-hidden="true"></i> เปิด PR</button>
       `)}
     </div>
     ${mbBn('pr')}`;
