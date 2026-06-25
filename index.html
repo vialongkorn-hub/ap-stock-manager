@@ -117,6 +117,11 @@ tr:hover td{background:var(--bg3);}
 .loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--text3);flex-direction:column;gap:10px;}
 .spinner{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--purple);border-radius:50%;animation:spin .6s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── EDIT-ONLY LOCK ── */
+.edit-only{pointer-events:none;opacity:0.35;user-select:none;transition:opacity .15s;}
+.app-edit-mode .edit-only{pointer-events:auto;opacity:1;user-select:auto;}
+
 @media(max-width:768px){
   .sidebar{display:none;}
   .shell{flex-direction:column;}
@@ -237,22 +242,42 @@ window.exitEditMode = function() {
   updateEditModeUI();
   renderTab(currentTab);
 };
+
 function updateEditModeUI() {
+  // toggle CSS class บน body — ควบคุม .edit-only ทั้งหมดในครั้งเดียว
+  document.body.classList.toggle('app-edit-mode', editMode);
+
+  // desktop topbar button
   const btn = document.getElementById('edit-mode-btn');
-  if (!btn) return;
-  if (editMode) {
-    btn.innerHTML = '<i class="ti ti-lock-open"></i> โหมดแก้ไข';
-    btn.style.background = '#534AB7';
-    btn.style.color = '#fff';
-    btn.style.borderColor = '#534AB7';
-    btn.onclick = exitEditMode;
-  } else {
-    btn.innerHTML = '<i class="ti ti-lock"></i> แก้ไข';
-    btn.style.background = 'none';
-    btn.style.color = 'var(--text2)';
-    btn.style.borderColor = 'var(--border2)';
-    btn.onclick = openPINOverlay;
+  if (btn) {
+    if (editMode) {
+      btn.innerHTML = '<i class="ti ti-lock-open"></i> โหมดแก้ไข';
+      btn.style.background = '#534AB7';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#534AB7';
+      btn.onclick = exitEditMode;
+    } else {
+      btn.innerHTML = '<i class="ti ti-lock"></i> แก้ไข';
+      btn.style.background = 'none';
+      btn.style.color = 'var(--text2)';
+      btn.style.borderColor = 'var(--border2)';
+      btn.onclick = openPINOverlay;
+    }
   }
+  // mobile: re-render เพื่ออัปเดต lock icon ใน header
+  if (isMobile()) renderTab(currentTab);
+}
+
+// helper — lock button สำหรับ mobile header
+function mbLockBtn() {
+  if (editMode) {
+    return `<button onclick="exitEditMode()" style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.9);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" title="ออกโหมดแก้ไข">
+      <i class="ti ti-lock-open" style="font-size:16px;color:#534AB7;" aria-hidden="true"></i>
+    </button>`;
+  }
+  return `<button onclick="openPINOverlay()" style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.15);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" title="unlock เพื่อแก้ไข">
+    <i class="ti ti-lock" style="font-size:16px;color:rgba(255,255,255,.7);" aria-hidden="true"></i>
+  </button>`;
 }
 
 const PRODUCTS = [
@@ -389,8 +414,6 @@ function renderPRBadge() {
   const open = prList.filter(p => p.status === 'open').length;
   const desktopBadge = document.getElementById('pr-badge');
   if (desktopBadge) desktopBadge.textContent = open;
-  // mobile badge อยู่ใน mbBn() ซึ่ง re-render ทุกครั้งที่เปลี่ยน tab อยู่แล้ว
-  // ถ้าอยู่ที่ overview ให้ re-render เพื่ออัปเดต metric PR
   if (isMobile() && currentTab === 'overview') renderOverviewMobile();
 }
 
@@ -479,7 +502,7 @@ function renderInventory() {
       <td id="inv-qty-${p.id}">${qty}</td>
       <td>${p.min}</td>
       <td><span class="badge ${s.cls}" id="inv-st-${p.id}">${s.txt}</span></td>
-      <td><button class="edit-btn" id="inv-btn-${p.id}" onclick="editStock('${p.id}')">แก้ไข</button></td>
+      <td><button class="edit-btn edit-only" id="inv-btn-${p.id}" onclick="editStock('${p.id}')">แก้ไข</button></td>
     </tr>`;
   }).join('');
   document.getElementById('main-content').innerHTML = `
@@ -503,12 +526,12 @@ window.editStock = async function(id) {
   const cell = document.getElementById('inv-qty-'+id);
   if (btn.textContent==='แก้ไข') {
     cell.innerHTML = `<input class="qty-input" id="inp-${id}" type="number" value="${stockData[id]?.qty??0}" min="0">`;
-    btn.textContent='บันทึก'; btn.className='save-btn';
+    btn.textContent='บันทึก'; btn.className='save-btn edit-only';
   } else {
     const val = parseInt(document.getElementById('inp-'+id)?.value)||0;
     const docId = stockData[id]?.docId;
     if (docId) await updateDoc(doc(db,'stock',docId),{qty:val,updatedAt:serverTimestamp()});
-    btn.textContent='แก้ไข'; btn.className='edit-btn';
+    btn.textContent='แก้ไข'; btn.className='edit-btn edit-only';
   }
 };
 
@@ -528,7 +551,7 @@ function renderWithdraw() {
           <div class="form-label">ค้นหาโครงการ (พิมพ์รหัส หรือชื่อ)</div>
           <div class="search-wrap">
             <i class="ti ti-search search-icon"></i>
-            <input class="search-input" id="wd-search" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off">
+            <input class="search-input edit-only" id="wd-search" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off">
             <div class="search-dropdown" id="wd-dropdown"></div>
           </div>
           <div id="wd-selected" style="font-size:11px;color:var(--purple);margin-top:4px;min-height:16px;"></div>
@@ -538,7 +561,7 @@ function renderWithdraw() {
           <div id="wd-item-list"></div>
           <div style="margin-top:10px;display:flex;gap:8px;">
             <input class="form-input" id="wd-note" placeholder="หมายเหตุ (ถ้ามี)" style="flex:1;">
-            <button class="tb-btn primary" onclick="confirmWithdraw()"><i class="ti ti-check"></i> ยืนยันเบิก</button>
+            <button class="tb-btn primary edit-only" onclick="confirmWithdraw()"><i class="ti ti-check"></i> ยืนยันเบิก</button>
           </div>
         </div>
         <div id="wd-placeholder" style="font-size:11px;color:var(--text3);padding:20px 0;text-align:center;">
@@ -560,7 +583,6 @@ function renderWithdraw() {
     </div>`;
 }
 
-// Global click handler for search dropdown — ตั้งครั้งเดียวตอน init
 document.addEventListener('click', e => {
   if (!e.target.closest('.search-wrap') && !e.target.closest('#wd-dropdown')) {
     document.getElementById('wd-dropdown')?.classList.remove('open');
@@ -630,11 +652,11 @@ function renderPRTab() {
     const s = STATUS_MAP[p.status]||STATUS_MAP.open;
     const nxt = NEXT_STATUS[p.status];
     const linesHtml = (p.lines||[]).map(l=>`<div style="font-size:10px;color:var(--text2);">${l.product} · <strong>${l.qty}</strong> ชิ้น</div>`).join('');
-    const btnHtml = nxt?`<button class="edit-btn" onclick="updatePR('${p.docId}','${nxt}')">${nxt==='wait'?'→ รอของเข้า':'→ เข้าคลัง'}</button>`:`<span style="font-size:10px;color:var(--text3);">✓</span>`;
+    const btnHtml = nxt?`<button class="edit-btn edit-only" onclick="updatePR('${p.docId}','${nxt}')">${nxt==='wait'?'→ รอของเข้า':'→ เข้าคลัง'}</button>`:`<span style="font-size:10px;color:var(--text3);">✓</span>`;
     return `<tr><td style="font-size:10px;font-weight:600;color:var(--purple);">${p.prNum||'—'}</td><td style="font-size:11px;">${p.project||'—'}</td><td>${linesHtml}</td><td style="font-size:10px;">${p.vendor||'—'}</td><td style="font-size:10px;">${fmtDate(p.createdAt)}</td><td><span class="badge ${s.cls}">${s.txt}</span></td><td>${btnHtml}</td></tr>`;
   }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px;">ไม่มีรายการ</td></tr>';
   document.getElementById('main-content').innerHTML = `
-    <div class="card">
+    <div class="card edit-only">
       <div class="card-hd"><i class="ti ti-plus" style="color:var(--purple);"></i> เปิด PR ใหม่</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
         <div class="form-group" style="margin:0;"><div class="form-label">เลขที่ PR</div><input class="form-input" id="pr-num" placeholder="เช่น PR-2026-042"></div>
@@ -745,7 +767,7 @@ window.showBrand = function(key) {
   document.getElementById('brand-level').style.display = 'none';
   const det = document.getElementById('proj-detail');
   det.style.display = 'flex';
-  const projRows = d.projects.map(p=>`<tr><td style="font-size:10px;color:var(--text3);">${p[0]}</td><td><strong>${p[1]}</strong></td><td>${p[2]}</td><td>${p[3]}</td><td><input class="qty-input" placeholder="${p[4]}" style="width:60px;"></td><td>${p[5]}</td><td>${p[6]}</td><td><button class="save-btn" onclick="this.textContent='✓'">บันทึก</button></td></tr>`).join('');
+  const projRows = d.projects.map(p=>`<tr><td style="font-size:10px;color:var(--text3);">${p[0]}</td><td><strong>${p[1]}</strong></td><td>${p[2]}</td><td>${p[3]}</td><td><input class="qty-input edit-only" placeholder="${p[4]}" style="width:60px;"></td><td>${p[5]}</td><td>${p[6]}</td><td><button class="save-btn edit-only" onclick="this.textContent='✓'">บันทึก</button></td></tr>`).join('');
   det.innerHTML = `
     <button class="back-btn" onclick="window.renderProjects()"><i class="ti ti-arrow-left"></i> กลับ Brand level</button>
     <div class="card">
@@ -790,9 +812,9 @@ const MB_CHIP_ON = 'background:#fff;color:#1e1b4b;border:0.5px solid #fff;font-w
 
 function mbHd(title, sub, rightHtml='', chipHtml='', searchHtml='') {
   return `<div style="background:${MB_HD};padding:12px 14px ${chipHtml||searchHtml?'0':'14px'};">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${chipHtml||searchHtml?'0':'0'};">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0;">
       <div><div style="font-size:16px;font-weight:500;color:${MB_TEXT};">${title}</div>${sub?`<div style="font-size:11px;color:${MB_SUB};margin-top:2px;">${sub}</div>`:''}</div>
-      ${rightHtml}
+      <div style="display:flex;align-items:center;gap:6px;">${rightHtml}${mbLockBtn()}</div>
     </div>
     ${searchHtml?`<div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.12);border-radius:7px;padding:6px 10px;margin-top:10px;margin-bottom:12px;"><i class="ti ti-search" style="font-size:14px;color:rgba(255,255,255,.5);" aria-hidden="true"></i><span style="font-size:12px;color:rgba(255,255,255,.5);">${searchHtml}</span></div>`:''}
     ${chipHtml?`<div style="display:flex;gap:6px;overflow-x:auto;padding:10px 0 12px;">${chipHtml}</div>`:''}
@@ -895,7 +917,7 @@ function renderInventoryMobile() {
     </div>`;
   }).join('');
 
-  const hd = mbHd('สินค้าคงคลัง','9 รายการ',mbHdBtn('search',false),
+  const hd = mbHd('สินค้าคงคลัง','9 รายการ','',
     mbChip('ทั้งหมด',true,"filterInvMobile(this,'all')")+mbChip('Kudos by CIT',false,"filterInvMobile(this,'cit')"));
 
   document.getElementById('main-content').innerHTML = `
@@ -926,7 +948,7 @@ function renderWithdrawMobile() {
       ${mbCard('',`
         <div style="position:relative;margin-bottom:10px;">
           <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);" aria-hidden="true"></i>
-          <input class="search-input" id="wd-search-mb" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off" style="padding-left:34px;height:36px;font-size:13px;">
+          <input class="search-input edit-only" id="wd-search-mb" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off" style="padding-left:34px;height:36px;font-size:13px;">
           <div class="search-dropdown" id="wd-dropdown"></div>
         </div>
         <div id="wd-selected" style="font-size:12px;color:#534AB7;margin-bottom:6px;min-height:16px;"></div>
@@ -935,7 +957,7 @@ function renderWithdrawMobile() {
           <div id="wd-item-list"></div>
           <div style="margin-top:10px;display:flex;gap:8px;">
             <input class="form-input" id="wd-note" placeholder="หมายเหตุ" style="flex:1;height:36px;font-size:13px;">
-            <button class="tb-btn primary" onclick="confirmWithdraw()" style="white-space:nowrap;height:36px;font-size:13px;"><i class="ti ti-check" aria-hidden="true"></i> ยืนยัน</button>
+            <button class="tb-btn primary edit-only" onclick="confirmWithdraw()" style="white-space:nowrap;height:36px;font-size:13px;"><i class="ti ti-check" aria-hidden="true"></i> ยืนยัน</button>
           </div>
         </div>
         <div id="wd-placeholder" style="font-size:12px;color:var(--text3);padding:16px 0;text-align:center;">
@@ -966,26 +988,26 @@ function renderPRMobile() {
     const s=STATUS_MAP[p.status]||STATUS_MAP.open;
     const nxt=NEXT_STATUS[p.status];
     const linesHtml=(p.lines||[]).map(l=>`<div style="font-size:11px;color:var(--text2);">${l.product} · ${l.qty} ชิ้น</div>`).join('');
-    const btnHtml=nxt?`<button class="edit-btn" onclick="updatePR('${p.docId}','${nxt}')" style="margin-top:6px;font-size:11px;">${nxt==='wait'?'→ รอของเข้า':'→ เข้าคลัง'}</button>`:`<span style="font-size:11px;color:var(--text3);">✓</span>`;
+    const btnHtml=nxt?`<button class="edit-btn edit-only" onclick="updatePR('${p.docId}','${nxt}')" style="margin-top:6px;font-size:11px;">${nxt==='wait'?'→ รอของเข้า':'→ เข้าคลัง'}</button>`:`<span style="font-size:11px;color:var(--text3);">✓</span>`;
     return `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);">
       <div style="flex:1;"><div style="font-size:13px;font-weight:500;color:#534AB7;">${p.prNum||'—'}</div>
       <div style="font-size:11px;color:var(--text2);margin-top:2px;">${p.project||'—'} · ${p.vendor||'—'}</div>
       <div style="margin-top:3px;">${linesHtml}</div></div>
-      <div style="text-align:right;flex-shrink:0;">${mbBadge(s.txt,s.cls.replace('b-',''))}
+      <div style="text-align:right;flex-shrink:0;">${mbBadge(s.txt,s.cls.replace('b-pr-',''))}
       <div style="font-size:10px;color:var(--text3);margin-top:2px;">${fmtDate(p.createdAt)}</div>${btnHtml}</div>
     </div>`;
   }).join('')||`<div style="font-size:12px;color:var(--text3);padding:14px 0;text-align:center;">ไม่มีรายการ</div>`;
 
   const chipBar=[['all','ทั้งหมด'],['open','เปิด PR'],['wait','รอของเข้า'],['done','เข้าคลัง']]
     .map(([v,l])=>mbChip(l,prFilter===v,`setPRFilterMb('${v}')`)).join('');
-  const hd=mbHd('PR Tracking','รายการ PR',mbHdBtn('plus',false),chipBar);
+  const hd=mbHd('PR Tracking','รายการ PR','',chipBar);
 
   document.getElementById('main-content').innerHTML = `
     ${hd}
     <div style="padding:12px 14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px;">
       ${mbCard('',rows)}
       ${mbCard('<i class="ti ti-plus" style="color:#534AB7;" aria-hidden="true"></i> เปิด PR ใหม่',`
-        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+        <div class="edit-only" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
           <div><div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;">เลขที่ PR</div>
             <input class="form-input" id="pr-num" placeholder="เช่น PR-2026-042" style="height:36px;font-size:13px;"></div>
           <div><div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;">โครงการ</div>
@@ -995,8 +1017,8 @@ function renderPRMobile() {
         </div>
         <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;">รายการสินค้า</div>
         <div id="pr-lines"></div>
-        <button class="edit-btn" onclick="addPRLine()" style="margin-top:6px;display:flex;align-items:center;gap:4px;font-size:12px;"><i class="ti ti-plus" aria-hidden="true"></i> เพิ่มสินค้า</button>
-        <button class="tb-btn primary" style="margin-top:10px;width:100%;justify-content:center;height:38px;font-size:13px;" onclick="submitPR()"><i class="ti ti-file-invoice" aria-hidden="true"></i> เปิด PR</button>
+        <button class="edit-btn edit-only" onclick="addPRLine()" style="margin-top:6px;display:flex;align-items:center;gap:4px;font-size:12px;"><i class="ti ti-plus" aria-hidden="true"></i> เพิ่มสินค้า</button>
+        <button class="tb-btn primary edit-only" style="margin-top:10px;width:100%;justify-content:center;height:38px;font-size:13px;" onclick="submitPR()"><i class="ti ti-file-invoice" aria-hidden="true"></i> เปิด PR</button>
       `)}
     </div>
     ${mbBn('pr')}`;
@@ -1008,7 +1030,7 @@ window.renderProjectsMobile = function() {
   const brandKeys=['all','pleno','grande','bkm','bkme','api','dist'];
   const brandLabels=['ทั้งหมด','Pleno','Grande','BKM','BKM Edition','Apitown','District'];
   const chipBar=brandLabels.map((l,i)=>mbChip(l,i===0,`filterProjMobile(this,'${brandKeys[i]}')`)).join('');
-  const hd=mbHd('โครงการ','153 โครงการ · 7 Brands',mbHdBtn('search',false),chipBar);
+  const hd=mbHd('โครงการ','153 โครงการ · 7 Brands','',chipBar);
 
   const allProjs=Object.entries(BRAND_DATA).flatMap(([key,d])=>
     d.projects.map(p=>({key,d,p}))
@@ -1044,7 +1066,6 @@ window.filterProjMobile = function(btn, brand) {
   });
 };
 
-// handle resize — re-render current tab when crossing breakpoint
 let lastMobile = isMobile();
 window.addEventListener('resize', () => {
   const nowMobile = isMobile();
