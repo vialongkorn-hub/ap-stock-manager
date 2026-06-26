@@ -1032,12 +1032,14 @@ window.showBrand = function(key) {
         <td><input class="qty-input" id="e-fy-${p.docId}" type="number" step="0.01" value="${p.fcYear||0}" style="width:56px;"></td>
         <td><input class="qty-input" id="e-fq-${p.docId}" type="number" step="0.01" value="${p.fcQuarter||0}" style="width:56px;"></td>
         <td><input class="qty-input" id="e-fm-${p.docId}" type="number" step="0.01" value="${p.fcMonth||0}" style="width:56px;"></td>
+        <td><input class="form-input" id="e-drive-${p.docId}" value="${p.driveLink||''}" placeholder="Google Drive URL" style="height:26px;font-size:11px;min-width:160px;"></td>
         <td style="display:flex;gap:4px;">
           <button class="save-btn" onclick="saveProject('${p.docId}','${key}')">บันทึก</button>
           <button class="edit-btn" onclick="cancelEditProject('${p.docId}','${key}')">ยกเลิก</button>
         </td>
       </tr>`;
     }
+    const driveBtn = p.driveLink ? `<a href="${p.driveLink}" target="_blank" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#534AB7;text-decoration:none;padding:2px 6px;border:1px solid #534AB7;border-radius:4px;"><i class="ti ti-brand-google-drive"></i> ผัง</a>` : '<span style="font-size:10px;color:var(--text3);">—</span>';
     return `<tr id="row-${p.docId}">
       <td style="font-size:10px;color:var(--text3);">${p.plantId}</td>
       <td><strong>${p.name}</strong></td>
@@ -1048,6 +1050,7 @@ window.showBrand = function(key) {
       <td>${p.fcYear||0}</td>
       <td>${p.fcQuarter||0}</td>
       <td>${p.fcMonth||0}</td>
+      <td>${driveBtn}</td>
       <td style="display:flex;gap:4px;">
         <button class="edit-btn" data-edit onclick="editProjectRow('${p.docId}','${key}')">แก้ไข</button>
         <button class="del-btn" data-edit onclick="deleteProject('${p.docId}','${key}')"><i class="ti ti-trash"></i></button>
@@ -1059,7 +1062,7 @@ window.showBrand = function(key) {
     <button class="back-btn" onclick="window.renderProjects()"><i class="ti ti-arrow-left"></i> กลับ Brand level</button>
     <div class="card" style="overflow-x:auto;">
       <div class="card-hd"><span class="badge ${cfg.badge}">${cfg.label}</span> · ${cfg.lock}</div>
-      <table><thead><tr><th>Plant</th><th>โครงการ</th><th>Seg</th><th>ยูนิต</th><th>ไม่ก่อสร้าง</th><th>เหลือติดตั้ง</th><th>FC/ปี</th><th>FC/Q</th><th>FC/เดือน</th><th>แก้ไข</th></tr></thead>
+      <table><thead><tr><th>Plant</th><th>โครงการ</th><th>Seg</th><th>ยูนิต</th><th>ไม่ก่อสร้าง</th><th>เหลือติดตั้ง</th><th>FC/ปี</th><th>FC/Q</th><th>FC/เดือน</th><th>ผังรูป</th><th>แก้ไข</th></tr></thead>
       <tbody id="proj-tbody">${projs.map(p=>projRowHtml(p)).join('')}</tbody></table>
     </div>`;
   applyEditState();
@@ -1484,10 +1487,11 @@ window.renderProjectsMobile = function() {
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
             <div style="font-size:14px;font-weight:500;color:${cfg.color};">${p.fcYear||0}</div>
-            <div style="display:flex;gap:4px;">
-              <button class="edit-btn" data-edit style="font-size:10px;" onclick="mbEditProj('${p.docId}')">แก้ไข</button>
-              <button class="del-btn" data-edit onclick="deleteProject('${p.docId}','mb')"><i class="ti ti-trash" style="font-size:12px;"></i></button>
-            </div>
+            <div style="display:flex;gap:4px;margin-top:2px;">
+            ${p.driveLink?`<a href="${p.driveLink}" target="_blank" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#534AB7;text-decoration:none;padding:2px 7px;border:1px solid #534AB7;border-radius:4px;"><i class="ti ti-brand-google-drive"></i> ดูผัง</a>`:''}
+            <button class="edit-btn" data-edit style="font-size:10px;" onclick="mbEditProj('${p.docId}')">แก้ไข</button>
+            <button class="del-btn" data-edit onclick="deleteProject('${p.docId}','mb')"><i class="ti ti-trash" style="font-size:12px;"></i></button>
+          </div>
           </div>
         </div>
         <div id="mb-edit-${p.docId}" style="display:none;margin-top:10px;flex-direction:column;gap:6px;">
@@ -1513,6 +1517,8 @@ window.renderProjectsMobile = function() {
             <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">FC/เดือน</div>
               <input class="form-input" id="mb-fm-${p.docId}" type="number" step="0.01" value="${p.fcMonth||0}" style="height:34px;font-size:12px;"></div>
           </div>
+          <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">Google Drive link รูปผัง</div>
+            <input class="form-input" id="mb-drive-${p.docId}" value="${p.driveLink||''}" placeholder="https://drive.google.com/..." style="height:34px;font-size:12px;"></div>
           <div style="display:flex;gap:6px;">
             <button class="save-btn" style="flex:1;height:34px;font-size:12px;" onclick="mbSaveProj('${p.docId}')">บันทึก</button>
             <button class="edit-btn" style="flex:1;height:34px;font-size:12px;" onclick="mbCancelProj('${p.docId}')">ยกเลิก</button>
@@ -1590,14 +1596,15 @@ window.mbSaveProj = async function(docId) {
   const fy   = parseFloat(document.getElementById('mb-fy-'+docId)?.value)||0;
   const fq   = parseFloat(document.getElementById('mb-fq-'+docId)?.value)||0;
   const fm   = parseFloat(document.getElementById('mb-fm-'+docId)?.value)||0;
+  const drive  = document.getElementById('mb-drive-'+docId)?.value.trim()||'';
   if (!name) { alert('กรุณากรอกชื่อโครงการ'); return; }
   await updateDoc(doc(db,'projects',docId), {
     name, segment:seg, totalUnit:unit, notStarted:ns,
     remainingInstall:ri, fcYear:fy, fcQuarter:fq, fcMonth:fm,
-    updatedAt:serverTimestamp()
+    driveLink:drive, updatedAt:serverTimestamp()
   });
   const idx = projectsData.findIndex(x => x.docId === docId);
-  if (idx >= 0) Object.assign(projectsData[idx], {name, segment:seg, totalUnit:unit, notStarted:ns, remainingInstall:ri, fcYear:fy, fcQuarter:fq, fcMonth:fm});
+  if (idx >= 0) Object.assign(projectsData[idx], {name, segment:seg, totalUnit:unit, notStarted:ns, remainingInstall:ri, fcYear:fy, fcQuarter:fq, fcMonth:fm, driveLink:drive});
   window.renderProjectsMobile();
 };
 window.filterProjMobile = function(btn, brand) {
