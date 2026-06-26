@@ -495,6 +495,7 @@ function startListeners() {
     if (currentTab === 'projects') renderTab('projects');
     if (currentTab === 'withdraw') renderTab('withdraw');
     if (currentTab === 'pr') renderTab('pr');
+    if (currentTab === 'overview') renderTab('overview');
   });
   onSnapshot(collection(db, 'stock'), snap => {
     snap.forEach(d => { stockData[d.data().productId] = {docId:d.id, qty:d.data().qty}; });
@@ -584,6 +585,9 @@ function renderOverview() {
     const d = l.createdAt.toDate ? l.createdAt.toDate() : new Date();
     return d.toDateString() === new Date().toDateString();
   }).length;
+  const totalProjects = projectsData.length;
+  const totalUnits = projectsData.reduce((s,p)=>s+(p.totalUnit||0),0);
+  const brands = new Set(projectsData.map(p=>p.brand)).size;
   const critItems = PRODUCTS.filter(p => getStatus(p.id).cls === 'b-crit');
   const alertHtml = critItems.length ? `
     <div class="alert-banner">
@@ -607,8 +611,8 @@ function renderOverview() {
   document.getElementById('main-content').innerHTML = `
     ${alertHtml}
     <div class="metrics">
-      <div class="metric"><div class="metric-lbl"><i class="ti ti-building"></i> โครงการ</div><div class="metric-val">153</div><div class="metric-sub">7 Brands</div></div>
-      <div class="metric"><div class="metric-lbl"><i class="ti ti-home"></i> ยูนิตรวม</div><div class="metric-val">28,461</div><div class="metric-sub">ทุกโครงการ</div></div>
+      <div class="metric"><div class="metric-lbl"><i class="ti ti-building"></i> โครงการ</div><div class="metric-val">${totalProjects}</div><div class="metric-sub">${brands} Brands</div></div>
+      <div class="metric"><div class="metric-lbl"><i class="ti ti-home"></i> ยูนิตรวม</div><div class="metric-val">${totalUnits.toLocaleString()}</div><div class="metric-sub">ทุกโครงการ</div></div>
       <div class="metric"><div class="metric-lbl"><i class="ti ti-transfer-out"></i> เบิกวันนี้</div><div class="metric-val">${todayW}</div><div class="metric-sub">รายการ</div></div>
       <div class="metric"><div class="metric-lbl"><i class="ti ti-file-invoice"></i> PR เปิดอยู่</div><div class="metric-val" style="color:var(--red);">${openPR}</div><div class="metric-sub">รายการ</div></div>
     </div>
@@ -1203,6 +1207,9 @@ function renderOverviewMobile() {
       <span>${l.project||'—'}</span><span style="color:var(--text2);">${l.product||'—'} · ${l.qty||0} ชิ้น</span>
     </div>`).join('')||`<div style="font-size:12px;color:var(--text3);padding:8px 0;">ยังไม่มีการเบิก</div>`;
 
+  const totalProjects = projectsData.length;
+  const totalUnits = projectsData.reduce((s,p)=>s+(p.totalUnit||0),0);
+
   const hd = mbHd('AP Stock','สวัสดี คุณสรพงศ์',`<div style="position:relative;">${mbHdBtn('bell')}<div style="width:7px;height:7px;background:#E24B4A;border-radius:50%;position:absolute;top:2px;right:2px;border:1.5px solid ${MB_HD};"></div></div>`);
 
   document.getElementById('main-content').innerHTML = `
@@ -1210,9 +1217,9 @@ function renderOverviewMobile() {
     <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1;">
       ${alertHtml}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        ${mbMetric('โครงการ','153')}
+        ${mbMetric('โครงการ',totalProjects)}
         ${mbMetric('PR เปิด',openPR,'#E24B4A')}
-        ${mbMetric('สินค้า','9')}
+        ${mbMetric('ยูนิตรวม',totalUnits.toLocaleString())}
         ${mbMetric('เบิกวันนี้',todayW)}
       </div>
       ${mbCard('โครงการล่าสุด',`
