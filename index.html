@@ -968,24 +968,25 @@ const PRODUCT_TO_BRAND = {
 let projectsData = [];
 
 window.renderProjects = function renderProjects() {
+  const brandSummary = {};
+  projectsData.forEach(p => {
+    if (!brandSummary[p.brand]) brandSummary[p.brand] = {count:0, units:0};
+    brandSummary[p.brand].count++;
+    brandSummary[p.brand].units += p.totalUnit||0;
+  });
+  const rows = Object.entries(BRAND_CFG).filter(([key])=>brandSummary[key]).map(([key,d])=>`
+    <tr class="drill-row" onclick="showBrand('${key}')">
+      <td><span class="badge ${d.badge}">${d.label}</span></td>
+      <td>${brandSummary[key]?.count||0}</td>
+      <td>${(brandSummary[key]?.units||0).toLocaleString()}</td>
+      <td style="color:var(--purple);font-size:10px;">ดู →</td>
+    </tr>`).join('');
   const brandOptions = Object.entries(BRAND_CFG).map(([k,d])=>`<option value="${k}">${d.label}</option>`).join('');
   document.getElementById('main-content').innerHTML = `
     <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div class="card-hd" style="margin-bottom:0;"><i class="ti ti-building"></i> โครงการ <span style="font-size:10px;color:var(--text3);font-weight:400;" id="proj-count">${projectsData.length} โครงการ</span></div>
-      </div>
-      <div class="search-wrap" style="margin-bottom:10px;">
-        <i class="ti ti-search search-icon"></i>
-        <input class="search-input" id="proj-search" placeholder="ค้นหารหัสหรือชื่อโครงการ เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="filterProjectsDesktop(this.value)" style="padding-right:80px;">
-        <select id="proj-brand-filter" onchange="filterProjectsDesktop(document.getElementById('proj-search').value)" style="position:absolute;right:6px;top:4px;height:24px;font-size:11px;border:none;background:transparent;color:var(--text2);cursor:pointer;outline:none;">
-          <option value="">ทุก Brand</option>
-          ${Object.entries(BRAND_CFG).map(([k,d])=>`<option value="${k}">${d.label}</option>`).join('')}
-        </select>
-      </div>
-      <div style="overflow-x:auto;">
-        <table><thead><tr><th>Plant</th><th>โครงการ</th><th>Brand</th><th>Seg</th><th>ยูนิต</th><th>เหลือติดตั้ง</th><th>FC/ปี</th><th>ผังรูป</th><th>แก้ไข</th></tr></thead>
-        <tbody id="proj-all-body">${renderProjAllRows(projectsData)}</tbody></table>
-      </div>
+      <div class="card-hd"><i class="ti ti-building"></i> Brand Level — กดเพื่อดูโครงการ</div>
+      <table><thead><tr><th>Brand</th><th>โครงการ</th><th>ยูนิตรวม</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table>
     </div>
     <div class="card edit-only" id="add-proj-card" style="opacity:0.35;pointer-events:none;">
       <div class="card-hd"><i class="ti ti-plus" style="color:var(--purple);"></i> เพิ่มโครงการใหม่</div>
@@ -1142,10 +1143,24 @@ window.showBrand = function(key) {
   det.innerHTML = `
     <button class="back-btn" onclick="window.renderProjects()"><i class="ti ti-arrow-left"></i> กลับ Brand level</button>
     <div class="card" style="overflow-x:auto;">
-      <div class="card-hd"><span class="badge ${cfg.badge}">${cfg.label}</span> · ${cfg.lock}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-hd" style="margin-bottom:0;"><span class="badge ${cfg.badge}">${cfg.label}</span> · ${cfg.lock} <span style="font-size:10px;color:var(--text3);font-weight:400;" id="brand-proj-count">${projs.length} โครงการ</span></div>
+      </div>
+      <div class="search-wrap" style="margin-bottom:10px;">
+        <i class="ti ti-search search-icon"></i>
+        <input class="search-input" id="brand-search" placeholder="ค้นหารหัสหรือชื่อโครงการ..." oninput="filterBrandProjs(this.value,'${key}')">
+      </div>
       <table><thead><tr><th>Plant</th><th>โครงการ</th><th>Seg</th><th>ยูนิต</th><th>ไม่ก่อสร้าง</th><th>เหลือติดตั้ง</th><th>FC/ปี</th><th>FC/Q</th><th>FC/เดือน</th><th>ผังรูป</th><th>แก้ไข</th></tr></thead>
       <tbody id="proj-tbody">${projs.map(p=>projRowHtml(p)).join('')}</tbody></table>
     </div>`;
+  applyEditState();
+};
+
+window.filterBrandProjs = function(q, brandKey) {
+  const projs = projectsData.filter(p => p.brand === brandKey);
+  const filtered = q ? projs.filter(p => p.plantId.includes(q) || p.name.toLowerCase().includes(q.toLowerCase())) : projs;
+  document.getElementById('proj-tbody').innerHTML = filtered.map(p=>projRowHtml(p)).join('');
+  document.getElementById('brand-proj-count').textContent = `${filtered.length} โครงการ`;
   applyEditState();
 };
 
