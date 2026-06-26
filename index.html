@@ -1232,7 +1232,7 @@ function renderOverviewMobile() {
 
 function renderInventoryMobile() {
   const rows = PRODUCTS.map(p=>{
-    const qty=stockData[p.id]?.qty??'...';
+    const qty=stockData[p.id]?.qty??0;
     const s=getStatus(p.id);
     const cmap={ok:['#EAF3DE','#27500A'],low:['#FAEEDA','#633806'],crit:['#FCEBEB','#A32D2D']};
     const [ibg,ic]=cmap[s.cls.replace('b-','')]||cmap.ok;
@@ -1242,7 +1242,9 @@ function renderInventoryMobile() {
       <div style="width:34px;height:34px;border-radius:9px;background:${ibg};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-lock" style="font-size:16px;color:${ic};" aria-hidden="true"></i></div>
       <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${p.name}</div><div style="font-size:11px;color:var(--text2);margin-top:1px;">${p.vendor} · ${p.brand}</div></div>
       <div style="text-align:right;" id="mb-inv-${p.id}">
-        <div style="font-size:16px;font-weight:500;${qc};cursor:pointer;" onclick="mbTapQty('${p.id}','${docId}',${qty})" title="แตะเพื่อแก้ไข">${qty}</div>
+        <button onclick="mbTapQty('${p.id}','${docId}',${qty})"
+          style="font-size:16px;font-weight:500;${qc}background:none;border:none;cursor:pointer;font-family:var(--font);padding:0;min-width:36px;text-align:right;"
+          title="แตะเพื่อแก้ไข">${qty}</button>
         <div style="font-size:10px;color:var(--text3);">min ${p.min}</div>
         ${mbBadge(s.txt,s.cls.replace('b-',''))}
       </div>
@@ -1416,20 +1418,28 @@ window.renderProjectsMobile = function() {
             </div>
           </div>
         </div>
-        <div id="mb-edit-${p.docId}" style="display:none;margin-top:10px;display:none;flex-direction:column;gap:6px;">
-          <input class="form-input" id="mb-name-${p.docId}" value="${p.name}" placeholder="ชื่อโครงการ" style="height:34px;font-size:12px;">
+        <div id="mb-edit-${p.docId}" style="display:none;margin-top:10px;flex-direction:column;gap:6px;">
+          <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">ชื่อโครงการ</div>
+            <input class="form-input" id="mb-name-${p.docId}" value="${p.name}" style="height:34px;font-size:12px;"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-            <input class="form-input" id="mb-seg-${p.docId}" type="number" value="${p.segment||0}" placeholder="Segment" style="height:34px;font-size:12px;">
-            <input class="form-input" id="mb-unit-${p.docId}" type="number" value="${p.totalUnit||0}" placeholder="Total Unit" style="height:34px;font-size:12px;">
+            <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">Segment</div>
+              <input class="form-input" id="mb-seg-${p.docId}" type="number" value="${p.segment||0}" style="height:34px;font-size:12px;"></div>
+            <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">Total Unit</div>
+              <input class="form-input" id="mb-unit-${p.docId}" type="number" value="${p.totalUnit||0}" style="height:34px;font-size:12px;"></div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-            <input class="form-input" id="mb-ns-${p.docId}" type="number" value="${p.notStarted||0}" placeholder="ไม่ก่อสร้าง" style="height:34px;font-size:12px;">
-            <input class="form-input" id="mb-ri-${p.docId}" type="number" value="${p.remainingInstall||0}" placeholder="เหลือติดตั้ง" style="height:34px;font-size:12px;">
+            <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">ยังไม่ก่อสร้าง</div>
+              <input class="form-input" id="mb-ns-${p.docId}" type="number" value="${p.notStarted||0}" style="height:34px;font-size:12px;"></div>
+            <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">เหลือติดตั้ง</div>
+              <input class="form-input" id="mb-ri-${p.docId}" type="number" value="${p.remainingInstall||0}" style="height:34px;font-size:12px;"></div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
-            <input class="form-input" id="mb-fy-${p.docId}" type="number" step="0.01" value="${p.fcYear||0}" placeholder="FC/ปี" style="height:34px;font-size:12px;">
-            <input class="form-input" id="mb-fq-${p.docId}" type="number" step="0.01" value="${p.fcQuarter||0}" placeholder="FC/Q" style="height:34px;font-size:12px;">
-            <input class="form-input" id="mb-fm-${p.docId}" type="number" step="0.01" value="${p.fcMonth||0}" placeholder="FC/เดือน" style="height:34px;font-size:12px;">
+            <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">FC/ปี</div>
+              <input class="form-input" id="mb-fy-${p.docId}" type="number" step="0.01" value="${p.fcYear||0}" style="height:34px;font-size:12px;"></div>
+            <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">FC/Q</div>
+              <input class="form-input" id="mb-fq-${p.docId}" type="number" step="0.01" value="${p.fcQuarter||0}" style="height:34px;font-size:12px;"></div>
+            <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">FC/เดือน</div>
+              <input class="form-input" id="mb-fm-${p.docId}" type="number" step="0.01" value="${p.fcMonth||0}" style="height:34px;font-size:12px;"></div>
           </div>
           <div style="display:flex;gap:6px;">
             <button class="save-btn" style="flex:1;height:34px;font-size:12px;" onclick="mbSaveProj('${p.docId}')">บันทึก</button>
