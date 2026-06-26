@@ -1083,6 +1083,7 @@ window.editProjectRow = function(docId, brandKey) {
     <td><input class="qty-input" id="e-fy-${docId}" type="number" step="0.01" value="${p.fcYear||0}" style="width:56px;"></td>
     <td><input class="qty-input" id="e-fq-${docId}" type="number" step="0.01" value="${p.fcQuarter||0}" style="width:56px;"></td>
     <td><input class="qty-input" id="e-fm-${docId}" type="number" step="0.01" value="${p.fcMonth||0}" style="width:56px;"></td>
+    <td><input class="form-input" id="e-drive-${docId}" value="${p.driveLink||''}" placeholder="Google Drive URL" style="height:26px;font-size:11px;min-width:160px;"></td>
     <td style="display:flex;gap:4px;">
       <button class="save-btn" onclick="saveProject('${docId}','${brandKey}')">บันทึก</button>
       <button class="edit-btn" onclick="cancelEditProject('${docId}','${brandKey}')">ยกเลิก</button>
@@ -1094,6 +1095,7 @@ window.cancelEditProject = function(docId, brandKey) {
   if (!p) return;
   const row = document.getElementById('row-'+docId);
   if (!row) return;
+  const driveBtn = p.driveLink ? `<a href="${p.driveLink}" target="_blank" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#534AB7;text-decoration:none;padding:2px 6px;border:1px solid #534AB7;border-radius:4px;"><i class="ti ti-brand-google-drive"></i> ผัง</a>` : '<span style="font-size:10px;color:var(--text3);">—</span>';
   row.innerHTML = `
     <td style="font-size:10px;color:var(--text3);">${p.plantId}</td>
     <td><strong>${p.name}</strong></td>
@@ -1104,7 +1106,11 @@ window.cancelEditProject = function(docId, brandKey) {
     <td>${p.fcYear||0}</td>
     <td>${p.fcQuarter||0}</td>
     <td>${p.fcMonth||0}</td>
-    <td><button class="edit-btn" data-edit onclick="editProjectRow('${docId}','${brandKey}')">แก้ไข</button></td>`;
+    <td>${driveBtn}</td>
+    <td style="display:flex;gap:4px;">
+      <button class="edit-btn" data-edit onclick="editProjectRow('${docId}','${brandKey}')">แก้ไข</button>
+      <button class="del-btn" data-edit onclick="deleteProject('${docId}','${brandKey}')"><i class="ti ti-trash"></i></button>
+    </td>`;
   applyEditState();
 };
 
