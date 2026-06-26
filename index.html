@@ -1064,6 +1064,13 @@ window.showBrand = function(key) {
       <div class="card-hd"><span class="badge ${cfg.badge}">${cfg.label}</span> · ${cfg.lock}</div>
       <table><thead><tr><th>Plant</th><th>โครงการ</th><th>Seg</th><th>ยูนิต</th><th>ไม่ก่อสร้าง</th><th>เหลือติดตั้ง</th><th>FC/ปี</th><th>FC/Q</th><th>FC/เดือน</th><th>ผังรูป</th><th>แก้ไข</th></tr></thead>
       <tbody id="proj-tbody">${projs.map(p=>projRowHtml(p)).join('')}</tbody></table>
+    </div>
+    <div class="card">
+      <div class="card-hd"><i class="ti ti-home"></i> Type บ้าน — เลือกโครงการเพื่อดู/แก้ไข Type</div>
+      <div id="ht-proj-select" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+        ${projs.map(p=>`<button class="chip" onclick="showHouseTypes('${p.docId}','${key}')">${p.plantId} · ${p.name}</button>`).join('')}
+      </div>
+      <div id="ht-content" style="color:var(--text3);font-size:12px;">← เลือกโครงการด้านบน</div>
     </div>`;
   applyEditState();
 };
@@ -1133,6 +1140,80 @@ window.saveProject = async function(docId, brandKey) {
   const idx = projectsData.findIndex(x => x.docId === docId);
   if (idx >= 0) Object.assign(projectsData[idx], {name, segment:seg, totalUnit:unit, notStarted:ns, remainingInstall:ri, fcYear:fy, fcQuarter:fq, fcMonth:fm});
   cancelEditProject(docId, brandKey);
+};
+
+const HT_STATUS = {built:'ก่อสร้างแล้ว', waiting:'รอก่อสร้าง', pending:'ยังไม่เริ่ม'};
+const HT_STATUS_CLS = {built:'b-ok', waiting:'b-low', pending:'b-crit'};
+
+function htLockOptions(brand) {
+  const items = (BRAND_ITEMS[brand]||[]).map(pid=>PRODUCTS.find(p=>p.id===pid)).filter(Boolean);
+  return items.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
+}
+
+window.showHouseTypes = function(docId, brandKey) {
+  const p = projectsData.find(x=>x.docId===docId);
+  if (!p) return;
+  // highlight selected chip
+  document.querySelectorAll('#ht-proj-select .chip').forEach(c=>c.classList.remove('active'));
+  event?.target?.classList.add('active');
+
+  const types = p.houseTypes||[];
+  const rows = types.map((t,i)=>`
+    <tr>
+      <td style="font-weight:500;">${t.typeName||'—'}</td>
+      <td>${t.units||0}</td>
+      <td style="font-size:11px;color:var(--text2);">${t.doorLock||'—'}</td>
+      <td><span class="badge ${HT_STATUS_CLS[t.status]||'b-ok'}">${HT_STATUS[t.status]||t.status||'—'}</span></td>
+      <td style="font-size:11px;color:var(--text3);">${t.note||'—'}</td>
+      <td style="display:flex;gap:4px;">
+        <button class="del-btn" data-edit onclick="deleteHouseType('${docId}','${brandKey}',${i})"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:12px;">ยังไม่มี Type บ้าน</td></tr>';
+
+  document.getElementById('ht-content').innerHTML = `
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">${p.name}</div>
+    <table style="margin-bottom:12px;"><thead><tr><th>Type</th><th>ยูนิต</th><th>Door Lock</th><th>สถานะ</th><th>หมายเหตุ</th><th></th></tr></thead>
+    <tbody>${rows}</tbody></table>
+    <div style="display:grid;grid-template-columns:1fr 80px 1fr 1fr 1fr auto;gap:6px;padding-top:10px;border-top:1px solid var(--border);align-items:center;">
+      <input class="form-input" data-edit id="ht-name" placeholder="ชื่อ Type เช่น A, 2BR" style="height:28px;font-size:11px;">
+      <input class="qty-input" data-edit id="ht-units" type="number" placeholder="ยูนิต" style="width:100%;">
+      <select class="form-select" data-edit id="ht-lock" style="height:28px;font-size:11px;">${htLockOptions(p.brand)}</select>
+      <select class="form-select" data-edit id="ht-status" style="height:28px;font-size:11px;">
+        <option value="built">ก่อสร้างแล้ว</option>
+        <option value="waiting">รอก่อสร้าง</option>
+        <option value="pending">ยังไม่เริ่ม</option>
+      </select>
+      <input class="form-input" data-edit id="ht-note" placeholder="หมายเหตุ" style="height:28px;font-size:11px;">
+      <button class="tb-btn primary" data-edit onclick="addHouseType('${docId}','${brandKey}')" style="height:28px;font-size:11px;white-space:nowrap;"><i class="ti ti-plus"></i> เพิ่ม</button>
+    </div>`;
+  applyEditState();
+};
+
+window.addHouseType = async function(docId, brandKey) {
+  const p = projectsData.find(x=>x.docId===docId);
+  if (!p) return;
+  const typeName = document.getElementById('ht-name')?.value.trim();
+  const units    = parseInt(document.getElementById('ht-units')?.value)||0;
+  const doorLock = document.getElementById('ht-lock')?.value||'';
+  const status   = document.getElementById('ht-status')?.value||'built';
+  const note     = document.getElementById('ht-note')?.value.trim()||'';
+  if (!typeName) { alert('กรุณากรอกชื่อ Type'); return; }
+  const types = [...(p.houseTypes||[]), {typeName, units, doorLock, status, note}];
+  await updateDoc(doc(db,'projects',docId), {houseTypes:types, updatedAt:serverTimestamp()});
+  const idx = projectsData.findIndex(x=>x.docId===docId);
+  if (idx>=0) projectsData[idx].houseTypes = types;
+  showHouseTypes(docId, brandKey);
+};
+
+window.deleteHouseType = async function(docId, brandKey, index) {
+  const p = projectsData.find(x=>x.docId===docId);
+  if (!p) return;
+  if (!confirm('ลบ Type นี้ออก?')) return;
+  const types = (p.houseTypes||[]).filter((_,i)=>i!==index);
+  await updateDoc(doc(db,'projects',docId), {houseTypes:types, updatedAt:serverTimestamp()});
+  const idx = projectsData.findIndex(x=>x.docId===docId);
+  if (idx>=0) projectsData[idx].houseTypes = types;
+  showHouseTypes(docId, brandKey);
 };
 
 window.addProject = async function() {
@@ -1496,6 +1577,7 @@ window.renderProjectsMobile = function() {
             <div style="display:flex;gap:4px;margin-top:2px;">
             ${p.driveLink?`<a href="${p.driveLink}" target="_blank" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#534AB7;text-decoration:none;padding:2px 7px;border:1px solid #534AB7;border-radius:4px;"><i class="ti ti-brand-google-drive"></i> ดูผัง</a>`:''}
             <button class="edit-btn" data-edit style="font-size:10px;" onclick="mbEditProj('${p.docId}')">แก้ไข</button>
+            <button class="edit-btn" data-edit style="font-size:10px;" onclick="mbToggleHT('${p.docId}')">Type</button>
             <button class="del-btn" data-edit onclick="deleteProject('${p.docId}','mb')"><i class="ti ti-trash" style="font-size:12px;"></i></button>
           </div>
           </div>
@@ -1528,6 +1610,33 @@ window.renderProjectsMobile = function() {
           <div style="display:flex;gap:6px;">
             <button class="save-btn" style="flex:1;height:34px;font-size:12px;" onclick="mbSaveProj('${p.docId}')">บันทึก</button>
             <button class="edit-btn" style="flex:1;height:34px;font-size:12px;" onclick="mbCancelProj('${p.docId}')">ยกเลิก</button>
+          </div>
+        </div>
+        <div id="mb-ht-${p.docId}" style="display:none;margin-top:10px;flex-direction:column;gap:6px;">
+          <div style="font-size:12px;font-weight:500;color:var(--text2);padding-bottom:6px;border-bottom:0.5px solid var(--border);">Type บ้าน</div>
+          ${(p.houseTypes||[]).length ? (p.houseTypes||[]).map((t,i)=>`
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);">
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:500;">${t.typeName}</div>
+                <div style="font-size:11px;color:var(--text2);">${t.units} ยูนิต · ${t.doorLock||'—'}</div>
+              </div>
+              <span style="font-size:10px;padding:2px 8px;border-radius:999px;background:${t.status==='built'?'#EAF3DE':t.status==='waiting'?'#FAEEDA':'#FCEBEB'};color:${t.status==='built'?'#27500A':t.status==='waiting'?'#633806':'#791F1F'};">${HT_STATUS[t.status]||t.status}</span>
+              <button class="del-btn" data-edit onclick="mbDeleteHouseType('${p.docId}',${i})"><i class="ti ti-trash" style="font-size:12px;"></i></button>
+            </div>`).join('') : '<div style="font-size:12px;color:var(--text3);padding:6px 0;">ยังไม่มี Type บ้าน</div>'}
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border);">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              <input class="form-input" data-edit id="mb-ht-name-${p.docId}" placeholder="ชื่อ Type เช่น A" style="height:32px;font-size:12px;">
+              <input class="form-input" data-edit id="mb-ht-units-${p.docId}" type="number" placeholder="ยูนิต" style="height:32px;font-size:12px;">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              <select class="form-select" data-edit id="mb-ht-lock-${p.docId}" style="height:32px;font-size:12px;">${htLockOptions(p.brand)}</select>
+              <select class="form-select" data-edit id="mb-ht-status-${p.docId}" style="height:32px;font-size:12px;">
+                <option value="built">ก่อสร้างแล้ว</option>
+                <option value="waiting">รอก่อสร้าง</option>
+                <option value="pending">ยังไม่เริ่ม</option>
+              </select>
+            </div>
+            <button class="tb-btn primary" data-edit style="height:32px;font-size:12px;justify-content:center;" onclick="mbAddHouseType('${p.docId}')"><i class="ti ti-plus"></i> เพิ่ม Type</button>
           </div>
         </div>
       </div>`};
@@ -1582,6 +1691,41 @@ window.mbAddProject = async function() {
     fcYear:fy, fcQuarter:fq, fcMonth:fm, driveLink:'', houseTypes:[],
     updatedAt:serverTimestamp()
   });
+  window.renderProjectsMobile();
+};
+
+window.mbToggleHT = function(docId) {
+  const el = document.getElementById('mb-ht-'+docId);
+  if (!el) return;
+  const isOpen = el.style.display === 'flex';
+  el.style.display = isOpen ? 'none' : 'flex';
+  el.style.flexDirection = 'column';
+  if (!isOpen) applyEditState();
+};
+
+window.mbAddHouseType = async function(docId) {
+  const p = projectsData.find(x=>x.docId===docId);
+  if (!p) return;
+  const typeName = document.getElementById('mb-ht-name-'+docId)?.value.trim();
+  const units    = parseInt(document.getElementById('mb-ht-units-'+docId)?.value)||0;
+  const doorLock = document.getElementById('mb-ht-lock-'+docId)?.value||'';
+  const status   = document.getElementById('mb-ht-status-'+docId)?.value||'built';
+  if (!typeName) { alert('กรุณากรอกชื่อ Type'); return; }
+  const types = [...(p.houseTypes||[]), {typeName, units, doorLock, status, note:''}];
+  await updateDoc(doc(db,'projects',docId), {houseTypes:types, updatedAt:serverTimestamp()});
+  const idx = projectsData.findIndex(x=>x.docId===docId);
+  if (idx>=0) projectsData[idx].houseTypes = types;
+  window.renderProjectsMobile();
+};
+
+window.mbDeleteHouseType = async function(docId, index) {
+  const p = projectsData.find(x=>x.docId===docId);
+  if (!p) return;
+  if (!confirm('ลบ Type นี้ออก?')) return;
+  const types = (p.houseTypes||[]).filter((_,i)=>i!==index);
+  await updateDoc(doc(db,'projects',docId), {houseTypes:types, updatedAt:serverTimestamp()});
+  const idx = projectsData.findIndex(x=>x.docId===docId);
+  if (idx>=0) projectsData[idx].houseTypes = types;
   window.renderProjectsMobile();
 };
 
