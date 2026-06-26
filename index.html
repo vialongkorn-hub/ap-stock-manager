@@ -1066,11 +1066,13 @@ window.showBrand = function(key) {
       <tbody id="proj-tbody">${projs.map(p=>projRowHtml(p)).join('')}</tbody></table>
     </div>
     <div class="card">
-      <div class="card-hd"><i class="ti ti-home"></i> Type บ้าน — เลือกโครงการเพื่อดู/แก้ไข Type</div>
-      <div id="ht-proj-select" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
-        ${projs.map(p=>`<button class="chip" onclick="showHouseTypes('${p.docId}','${key}')">${p.plantId} · ${p.name}</button>`).join('')}
+      <div class="card-hd"><i class="ti ti-home"></i> Type บ้าน</div>
+      <div style="position:relative;margin-bottom:12px;">
+        <i class="ti ti-search search-icon"></i>
+        <input class="search-input" id="ht-search" placeholder="พิมพ์รหัสหรือชื่อโครงการ เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onHTSearch(this.value,'${key}')" autocomplete="off">
+        <div class="search-dropdown" id="ht-dropdown"></div>
       </div>
-      <div id="ht-content" style="color:var(--text3);font-size:12px;">← เลือกโครงการด้านบน</div>
+      <div id="ht-content" style="color:var(--text3);font-size:12px;padding:8px 0;">← ค้นหาโครงการด้านบน</div>
     </div>`;
   applyEditState();
 };
@@ -1150,12 +1152,26 @@ function htLockOptions(brand) {
   return items.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
 }
 
+window.onHTSearch = function(q, brandKey) {
+  const dd = document.getElementById('ht-dropdown');
+  if (!q) { dd.classList.remove('open'); return; }
+  const res = projectsData.filter(p=>p.plantId.includes(q)||p.name.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  if (!res.length) { dd.classList.remove('open'); return; }
+  dd.innerHTML = res.map(p=>`<div class="search-item" onclick="onHTSelect('${p.docId}','${brandKey}')"><span class="search-item-id">${p.plantId}</span>${p.name}</div>`).join('');
+  dd.classList.add('open');
+};
+
+window.onHTSelect = function(docId, brandKey) {
+  const p = projectsData.find(x=>x.docId===docId);
+  if (!p) return;
+  document.getElementById('ht-search').value = `${p.plantId} · ${p.name}`;
+  document.getElementById('ht-dropdown').classList.remove('open');
+  showHouseTypes(docId, brandKey);
+};
+
 window.showHouseTypes = function(docId, brandKey) {
   const p = projectsData.find(x=>x.docId===docId);
   if (!p) return;
-  // highlight selected chip
-  document.querySelectorAll('#ht-proj-select .chip').forEach(c=>c.classList.remove('active'));
-  event?.target?.classList.add('active');
 
   const types = p.houseTypes||[];
   const rows = types.map((t,i)=>`
