@@ -188,7 +188,7 @@ tr:hover td{background:var(--bg3);}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB8s2Bs7NyQx1gm72faKajBABDFblOWfFM",
@@ -924,6 +924,7 @@ window.renderProjects = function renderProjects() {
       <td>${(brandSummary[key]?.units||0).toLocaleString()}</td>
       <td style="color:var(--purple);font-size:10px;">ดู →</td>
     </tr>`).join('');
+  const brandOptions = Object.entries(BRAND_CFG).map(([k,d])=>`<option value="${k}">${d.label}</option>`).join('');
   document.getElementById('main-content').innerHTML = `
     <div id="brand-level">
       <div class="card">
@@ -931,8 +932,29 @@ window.renderProjects = function renderProjects() {
         <table><thead><tr><th>Brand</th><th>โครงการ</th><th>ยูนิตรวม</th><th></th></tr></thead>
         <tbody>${rows}</tbody></table>
       </div>
+      <div class="card edit-only" id="add-proj-card" style="opacity:0.35;pointer-events:none;">
+        <div class="card-hd"><i class="ti ti-plus" style="color:var(--purple);"></i> เพิ่มโครงการใหม่</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;">
+          <div class="form-group" style="margin:0;"><div class="form-label">Plant ID</div><input class="form-input" data-edit id="np-plant" placeholder="เช่น 4200"></div>
+          <div class="form-group" style="margin:0;"><div class="form-label">ชื่อโครงการ</div><input class="form-input" data-edit id="np-name" placeholder="ชื่อโครงการ"></div>
+          <div class="form-group" style="margin:0;"><div class="form-label">Brand</div><select class="form-select" data-edit id="np-brand">${brandOptions}</select></div>
+          <div class="form-group" style="margin:0;"><div class="form-label">Segment</div><input class="form-input" data-edit id="np-seg" type="number" placeholder="1-4" min="1" max="4"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;">
+          <div class="form-group" style="margin:0;"><div class="form-label">Total Unit</div><input class="form-input" data-edit id="np-unit" type="number" placeholder="0"></div>
+          <div class="form-group" style="margin:0;"><div class="form-label">ไม่ก่อสร้าง</div><input class="form-input" data-edit id="np-ns" type="number" placeholder="0"></div>
+          <div class="form-group" style="margin:0;"><div class="form-label">เหลือติดตั้ง</div><input class="form-input" data-edit id="np-ri" type="number" placeholder="0"></div>
+          <div class="form-group" style="margin:0;"><div class="form-label">FC/ปี</div><input class="form-input" data-edit id="np-fy" type="number" step="0.01" placeholder="0"></div>
+          <div class="form-group" style="margin:0;"><div class="form-label">FC/Q</div><input class="form-input" data-edit id="np-fq" type="number" step="0.01" placeholder="0"></div>
+        </div>
+        <button class="tb-btn primary" data-edit onclick="addProject()"><i class="ti ti-plus"></i> เพิ่มโครงการ</button>
+      </div>
     </div>
     <div id="proj-detail" style="display:none;flex-direction:column;gap:12px;"></div>`;
+  applyEditState();
+  // sync add-proj-card visibility with edit mode manually (it's a div not button)
+  const card = document.getElementById('add-proj-card');
+  if (card) { card.style.opacity = editMode?'1':'0.35'; card.style.pointerEvents = editMode?'':'none'; }
 }
 window.showBrand = function(key) {
   const cfg = BRAND_CFG[key];
@@ -969,7 +991,10 @@ window.showBrand = function(key) {
       <td>${p.fcYear||0}</td>
       <td>${p.fcQuarter||0}</td>
       <td>${p.fcMonth||0}</td>
-      <td><button class="edit-btn" data-edit onclick="editProjectRow('${p.docId}','${key}')">แก้ไข</button></td>
+      <td style="display:flex;gap:4px;">
+        <button class="edit-btn" data-edit onclick="editProjectRow('${p.docId}','${key}')">แก้ไข</button>
+        <button class="del-btn" data-edit onclick="deleteProject('${p.docId}','${key}')"><i class="ti ti-trash"></i></button>
+      </td>
     </tr>`;
   }
 
@@ -1042,6 +1067,40 @@ window.saveProject = async function(docId, brandKey) {
   const idx = projectsData.findIndex(x => x.docId === docId);
   if (idx >= 0) Object.assign(projectsData[idx], {name, segment:seg, totalUnit:unit, notStarted:ns, remainingInstall:ri, fcYear:fy, fcQuarter:fq, fcMonth:fm});
   cancelEditProject(docId, brandKey);
+};
+
+window.addProject = async function() {
+  const plantId = document.getElementById('np-plant')?.value.trim();
+  const name    = document.getElementById('np-name')?.value.trim();
+  const brand   = document.getElementById('np-brand')?.value;
+  const seg     = parseInt(document.getElementById('np-seg')?.value)||0;
+  const unit    = parseInt(document.getElementById('np-unit')?.value)||0;
+  const ns      = parseInt(document.getElementById('np-ns')?.value)||0;
+  const ri      = parseInt(document.getElementById('np-ri')?.value)||0;
+  const fy      = parseFloat(document.getElementById('np-fy')?.value)||0;
+  const fq      = parseFloat(document.getElementById('np-fq')?.value)||0;
+  const fm      = parseFloat((fq/3).toFixed(2));
+  if (!plantId || !name) { alert('กรุณากรอก Plant ID และชื่อโครงการ'); return; }
+  const product = Object.entries(PRODUCT_TO_BRAND).find(([,v])=>v===brand)?.[0]||brand;
+  await addDoc(collection(db,'projects'), {
+    plantId, name, product, brand, bg:'TH', segment:seg,
+    totalUnit:unit, notStarted:ns, remaining2026:0, remainingInstall:ri,
+    fcYear:fy, fcQuarter:fq, fcMonth:fm, driveLink:'', houseTypes:[],
+    updatedAt:serverTimestamp()
+  });
+  // clear form
+  ['np-plant','np-name','np-seg','np-unit','np-ns','np-ri','np-fy','np-fq'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+};
+
+window.deleteProject = async function(docId, brandKey) {
+  const p = projectsData.find(x => x.docId === docId);
+  if (!p) return;
+  if (!confirm(`ลบ "${p.name}" ออกจากระบบ?\nไม่สามารถกู้คืนได้`)) return;
+  await deleteDoc(doc(db,'projects',docId));
+  projectsData = projectsData.filter(x => x.docId !== docId);
+  showBrand(brandKey);
 };
 
 function renderSpec() {
