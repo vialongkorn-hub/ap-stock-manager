@@ -599,15 +599,75 @@ function renderOverview() {
     <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px;">
       <span>${l.project||'—'}</span><span style="color:var(--text2);">${l.product||'—'} · ${l.qty||0} ชิ้น</span>
     </div>`).join('') || '<div style="font-size:11px;color:var(--text3);padding:8px 0;">ยังไม่มีการเบิก</div>';
-  const chartData = currentPeriod==='week'
-    ? {labels:['จ','อ','พ','พฤ','ศ','ส','อา'],values:[12,25,18,44,30,80,45]}
-    : {labels:['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.'],values:[320,410,285,520,390,275]};
-  const maxVal = Math.max(...chartData.values, 1);
+  // ── กราฟจาก withdrawLog จริง ──
   const colors = ['#534AB7','#1D9E75','#BA7517','#185FA5','#639922','#A32D2D','#0F6E56'];
-  const barsHtml = chartData.values.map((v,i) => {
-    const h = Math.max(6,(v/maxVal)*90);
-    return `<div class="bar-col"><div class="bar-val">${v}</div><div class="bar" style="height:${h}px;background:${colors[i%colors.length]};"></div><div class="bar-lbl">${chartData.labels[i]}</div></div>`;
-  }).join('');
+  let barsHtml = '';
+  if (currentPeriod === 'week') {
+    const days = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+    const counts = Array(7).fill(0);
+    const today = new Date();
+    withdrawLog.forEach(l => {
+      if (!l.createdAt) return;
+      const d = l.createdAt.toDate ? l.createdAt.toDate() : new Date(l.createdAt);
+      const diff = Math.floor((today - d) / 86400000);
+      if (diff < 7) counts[6 - diff] += (l.qty||0);
+    });
+    const maxVal = Math.max(...counts, 1);
+    const labels = Array.from({length:7}, (_,i) => {
+      const d = new Date(today); d.setDate(today.getDate() - (6-i));
+      return days[d.getDay()];
+    });
+    barsHtml = counts.map((v,i) => {
+      const h = Math.max(4,(v/maxVal)*90);
+      return `<div class="bar-col"><div class="bar-val">${v||''}</div><div class="bar" style="height:${h}px;background:${colors[i%colors.length]};"></div><div class="bar-lbl">${labels[i]}</div></div>`;
+    }).join('');
+  } else {
+    const monthNames = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    const counts = Array(6).fill(0);
+    const now = new Date();
+    withdrawLog.forEach(l => {
+      if (!l.createdAt) return;
+      const d = l.createdAt.toDate ? l.createdAt.toDate() : new Date(l.createdAt);
+      const monthDiff = (now.getFullYear()-d.getFullYear())*12 + now.getMonth()-d.getMonth();
+      if (monthDiff >= 0 && monthDiff < 6) counts[5-monthDiff] += (l.qty||0);
+    });
+    const maxVal = Math.max(...counts, 1);
+    const labels = Array.from({length:6}, (_,i) => {
+      const d = new Date(now.getFullYear(), now.getMonth()-(5-i), 1);
+      return monthNames[d.getMonth()];
+    });
+    barsHtml = counts.map((v,i) => {
+      const h = Math.max(4,(v/maxVal)*90);
+      return `<div class="bar-col"><div class="bar-val">${v||''}</div><div class="bar" style="height:${h}px;background:${colors[i%colors.length]};"></div><div class="bar-lbl">${labels[i]}</div></div>`;
+    }).join('');
+  }
+
+  // ── ตารางสรุปตาม Brand จาก projectsData จริง ──
+  const brandSummary = {};
+  projectsData.forEach(p => {
+    const b = p.brand;
+    if (!brandSummary[b]) brandSummary[b] = {count:0, units:0, fc:0};
+    brandSummary[b].count++;
+    brandSummary[b].units += p.totalUnit||0;
+    brandSummary[b].fc += p.fcYear||0;
+  });
+  const brandRows = Object.entries(BRAND_CFG).filter(([k])=>brandSummary[k]).map(([k,d])=>`
+    <tr><td><span class="badge ${d.badge}">${d.label}</span></td>
+    <td>${brandSummary[k].count}</td>
+    <td>${brandSummary[k].units.toLocaleString()}</td>
+    <td>${brandSummary[k].fc.toFixed(0)}</td>
+    <td style="font-size:10px;">${d.lock}</td></tr>`).join('');
+
+  // ── AI Insight จากข้อมูลจริง ──
+  const topBrand = Object.entries(brandSummary).sort((a,b)=>b[1].units-a[1].units)[0];
+  const topBrandPct = topBrand ? Math.round(topBrand[1].units/totalUnits*100) : 0;
+  const critStock = PRODUCTS.filter(p=>getStatus(p.id).cls==='b-crit').map(p=>p.name);
+  const aiTxt = [
+    topBrand ? `${BRAND_CFG[topBrand[0]]?.label||topBrand[0]} ครอง ${topBrandPct}% ของยูนิตทั้งหมด` : '',
+    critStock.length ? `สต็อควิกฤต: ${critStock.join(', ')} — ควรเปิด PR ด่วน` : 'สต็อคทุกรายการอยู่ในเกณฑ์ดี',
+    `PR เปิดอยู่ ${openPR} รายการ · เบิกวันนี้ ${todayW} ครั้ง`
+  ].filter(Boolean).join(' · ');
+
   document.getElementById('main-content').innerHTML = `
     ${alertHtml}
     <div class="metrics">
@@ -618,7 +678,7 @@ function renderOverview() {
     </div>
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div class="card-hd" style="margin-bottom:0;"><i class="ti ti-chart-bar"></i> ยอดเบิกสินค้า</div>
+        <div class="card-hd" style="margin-bottom:0;"><i class="ti ti-chart-bar"></i> ยอดเบิกสินค้า (ชิ้น)</div>
         <div class="toggle-group">
           <button class="toggle-btn ${currentPeriod==='week'?'active':''}" onclick="switchPeriod('week')">รายอาทิตย์</button>
           <button class="toggle-btn ${currentPeriod==='month'?'active':''}" onclick="switchPeriod('month')">รายเดือน</button>
@@ -630,18 +690,11 @@ function renderOverview() {
       <div class="card">
         <div class="card-hd"><i class="ti ti-building"></i> สรุปตาม Brand</div>
         <table><thead><tr><th>Brand</th><th>โครงการ</th><th>ยูนิต</th><th>FC/ปี</th><th>Door Lock</th></tr></thead>
-        <tbody>
-          <tr><td><span class="badge b-pleno">Pleno/Town</span></td><td>72</td><td>18,420</td><td>4,605</td><td style="font-size:10px;">Y02-Knob/Handle</td></tr>
-          <tr><td><span class="badge b-grande">Grande Pleno</span></td><td>28</td><td>4,821</td><td>1,205</td><td style="font-size:10px;">J03 / Aqara A100</td></tr>
-          <tr><td><span class="badge b-bkm">BKM</span></td><td>22</td><td>3,864</td><td>966</td><td style="font-size:10px;">A2 / P60</td></tr>
-          <tr><td><span class="badge b-bkme">BKM Edition</span></td><td>14</td><td>1,201</td><td>300</td><td style="font-size:10px;">J03 / Aqara</td></tr>
-          <tr><td><span class="badge b-api">Apitown</span></td><td>12</td><td>2,961</td><td>740</td><td style="font-size:10px;">A2 / P60 / Esther</td></tr>
-          <tr><td><span class="badge b-dist">District</span></td><td>2</td><td>36</td><td>9</td><td style="font-size:10px;">J03 Pro</td></tr>
-        </tbody></table>
+        <tbody>${brandRows}</tbody></table>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div class="card"><div class="card-hd"><i class="ti ti-transfer-out"></i> เบิกล่าสุด</div>${recentLog}</div>
-        <div class="ai-box"><div class="ai-lbl"><i class="ti ti-sparkles"></i> AI Insight</div><div class="ai-txt">Pleno/Town ครอง 65% ของ demand · Q3 คาดต้องการ Y02-Knob 1,151 ชิ้น · ควรเปิด PR เพิ่มด่วน</div></div>
+        <div class="ai-box"><div class="ai-lbl"><i class="ti ti-sparkles"></i> AI Insight</div><div class="ai-txt">${aiTxt}</div></div>
       </div>
     </div>`;
 }
