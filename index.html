@@ -968,51 +968,126 @@ const PRODUCT_TO_BRAND = {
 let projectsData = [];
 
 window.renderProjects = function renderProjects() {
-  const brandSummary = {};
-  projectsData.forEach(p => {
-    if (!brandSummary[p.brand]) brandSummary[p.brand] = {count:0, units:0};
-    brandSummary[p.brand].count++;
-    brandSummary[p.brand].units += p.totalUnit||0;
-  });
-  const rows = Object.entries(BRAND_CFG).filter(([key])=>brandSummary[key]).map(([key,d])=>`
-    <tr class="drill-row" onclick="showBrand('${key}')">
-      <td><span class="badge ${d.badge}">${d.label}</span></td>
-      <td>${brandSummary[key]?.count||0}</td>
-      <td>${(brandSummary[key]?.units||0).toLocaleString()}</td>
-      <td style="color:var(--purple);font-size:10px;">ดู →</td>
-    </tr>`).join('');
   const brandOptions = Object.entries(BRAND_CFG).map(([k,d])=>`<option value="${k}">${d.label}</option>`).join('');
   document.getElementById('main-content').innerHTML = `
-    <div id="brand-level">
-      <div class="card">
-        <div class="card-hd"><i class="ti ti-building"></i> Brand Level — กดเพื่อ drill down</div>
-        <table><thead><tr><th>Brand</th><th>โครงการ</th><th>ยูนิตรวม</th><th></th></tr></thead>
-        <tbody>${rows}</tbody></table>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-hd" style="margin-bottom:0;"><i class="ti ti-building"></i> โครงการ <span style="font-size:10px;color:var(--text3);font-weight:400;" id="proj-count">${projectsData.length} โครงการ</span></div>
       </div>
-      <div class="card edit-only" id="add-proj-card" style="opacity:0.35;pointer-events:none;">
-        <div class="card-hd"><i class="ti ti-plus" style="color:var(--purple);"></i> เพิ่มโครงการใหม่</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;">
-          <div class="form-group" style="margin:0;"><div class="form-label">Plant ID</div><input class="form-input" data-edit id="np-plant" placeholder="เช่น 4200"></div>
-          <div class="form-group" style="margin:0;"><div class="form-label">ชื่อโครงการ</div><input class="form-input" data-edit id="np-name" placeholder="ชื่อโครงการ"></div>
-          <div class="form-group" style="margin:0;"><div class="form-label">Brand</div><select class="form-select" data-edit id="np-brand">${brandOptions}</select></div>
-          <div class="form-group" style="margin:0;"><div class="form-label">Segment</div><input class="form-input" data-edit id="np-seg" type="number" placeholder="1-4" min="1" max="4"></div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;">
-          <div class="form-group" style="margin:0;"><div class="form-label">Total Unit</div><input class="form-input" data-edit id="np-unit" type="number" placeholder="0"></div>
-          <div class="form-group" style="margin:0;"><div class="form-label">ไม่ก่อสร้าง</div><input class="form-input" data-edit id="np-ns" type="number" placeholder="0"></div>
-          <div class="form-group" style="margin:0;"><div class="form-label">เหลือติดตั้ง</div><input class="form-input" data-edit id="np-ri" type="number" placeholder="0"></div>
-          <div class="form-group" style="margin:0;"><div class="form-label">FC/ปี</div><input class="form-input" data-edit id="np-fy" type="number" step="0.01" placeholder="0"></div>
-          <div class="form-group" style="margin:0;"><div class="form-label">FC/Q</div><input class="form-input" data-edit id="np-fq" type="number" step="0.01" placeholder="0"></div>
-        </div>
-        <button class="tb-btn primary" data-edit onclick="addProject()"><i class="ti ti-plus"></i> เพิ่มโครงการ</button>
+      <div class="search-wrap" style="margin-bottom:10px;">
+        <i class="ti ti-search search-icon"></i>
+        <input class="search-input" id="proj-search" placeholder="ค้นหารหัสหรือชื่อโครงการ เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="filterProjectsDesktop(this.value)" style="padding-right:80px;">
+        <select id="proj-brand-filter" onchange="filterProjectsDesktop(document.getElementById('proj-search').value)" style="position:absolute;right:6px;top:4px;height:24px;font-size:11px;border:none;background:transparent;color:var(--text2);cursor:pointer;outline:none;">
+          <option value="">ทุก Brand</option>
+          ${Object.entries(BRAND_CFG).map(([k,d])=>`<option value="${k}">${d.label}</option>`).join('')}
+        </select>
+      </div>
+      <div style="overflow-x:auto;">
+        <table><thead><tr><th>Plant</th><th>โครงการ</th><th>Brand</th><th>Seg</th><th>ยูนิต</th><th>เหลือติดตั้ง</th><th>FC/ปี</th><th>ผังรูป</th><th>แก้ไข</th></tr></thead>
+        <tbody id="proj-all-body">${renderProjAllRows(projectsData)}</tbody></table>
       </div>
     </div>
-    <div id="proj-detail" style="display:none;flex-direction:column;gap:12px;"></div>`;
+    <div class="card edit-only" id="add-proj-card" style="opacity:0.35;pointer-events:none;">
+      <div class="card-hd"><i class="ti ti-plus" style="color:var(--purple);"></i> เพิ่มโครงการใหม่</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;">
+        <div class="form-group" style="margin:0;"><div class="form-label">Plant ID</div><input class="form-input" data-edit id="np-plant" placeholder="เช่น 4200"></div>
+        <div class="form-group" style="margin:0;"><div class="form-label">ชื่อโครงการ</div><input class="form-input" data-edit id="np-name" placeholder="ชื่อโครงการ"></div>
+        <div class="form-group" style="margin:0;"><div class="form-label">Brand</div><select class="form-select" data-edit id="np-brand">${brandOptions}</select></div>
+        <div class="form-group" style="margin:0;"><div class="form-label">Segment</div><input class="form-input" data-edit id="np-seg" type="number" placeholder="1-4" min="1" max="4"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;">
+        <div class="form-group" style="margin:0;"><div class="form-label">Total Unit</div><input class="form-input" data-edit id="np-unit" type="number" placeholder="0"></div>
+        <div class="form-group" style="margin:0;"><div class="form-label">ไม่ก่อสร้าง</div><input class="form-input" data-edit id="np-ns" type="number" placeholder="0"></div>
+        <div class="form-group" style="margin:0;"><div class="form-label">เหลือติดตั้ง</div><input class="form-input" data-edit id="np-ri" type="number" placeholder="0"></div>
+        <div class="form-group" style="margin:0;"><div class="form-label">FC/ปี</div><input class="form-input" data-edit id="np-fy" type="number" step="0.01" placeholder="0"></div>
+        <div class="form-group" style="margin:0;"><div class="form-label">FC/Q</div><input class="form-input" data-edit id="np-fq" type="number" step="0.01" placeholder="0"></div>
+      </div>
+      <button class="tb-btn primary" data-edit onclick="addProject()"><i class="ti ti-plus"></i> เพิ่มโครงการ</button>
+    </div>`;
   applyEditState();
-  // sync add-proj-card visibility with edit mode manually (it's a div not button)
   const card = document.getElementById('add-proj-card');
   if (card) { card.style.opacity = editMode?'1':'0.35'; card.style.pointerEvents = editMode?'':'none'; }
 }
+
+function renderProjAllRows(projs) {
+  if (!projs.length) return '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:16px;">ไม่พบโครงการ</td></tr>';
+  return projs.map(p => {
+    const cfg = BRAND_CFG[p.brand]||BRAND_CFG.pleno;
+    const driveBtn = p.driveLink ? `<a href="${p.driveLink}" target="_blank" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#534AB7;text-decoration:none;padding:2px 6px;border:1px solid #534AB7;border-radius:4px;"><i class="ti ti-brand-google-drive"></i> ผัง</a>` : '<span style="font-size:10px;color:var(--text3);">—</span>';
+    return `<tr id="row-${p.docId}">
+      <td style="font-size:10px;color:var(--text3);">${p.plantId}</td>
+      <td><strong>${p.name}</strong></td>
+      <td><span class="badge ${cfg.badge}" style="font-size:10px;">${cfg.label}</span></td>
+      <td>${p.segment||'—'}</td>
+      <td>${p.totalUnit||0}</td>
+      <td>${p.remainingInstall||0}</td>
+      <td>${p.fcYear||0}</td>
+      <td>${driveBtn}</td>
+      <td style="display:flex;gap:4px;">
+        <button class="edit-btn" data-edit onclick="editProjInline('${p.docId}')">แก้ไข</button>
+        <button class="edit-btn" data-edit onclick="toggleHTDesktop('${p.docId}','all')">Type</button>
+        <button class="del-btn" data-edit onclick="deleteProject('${p.docId}','desktop')"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>
+    <tr id="ht-row-${p.docId}" style="display:none;">
+      <td colspan="9" style="padding:0;">
+        <div id="ht-inner-${p.docId}" style="padding:12px 16px;background:var(--bg3);border-top:1px solid var(--border);"></div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+window.filterProjectsDesktop = function(q) {
+  const brand = document.getElementById('proj-brand-filter')?.value||'';
+  const filtered = projectsData.filter(p => {
+    const matchQ = !q || p.plantId.toLowerCase().includes(q.toLowerCase()) || p.name.toLowerCase().includes(q.toLowerCase());
+    const matchBrand = !brand || p.brand === brand;
+    return matchQ && matchBrand;
+  });
+  document.getElementById('proj-all-body').innerHTML = renderProjAllRows(filtered);
+  document.getElementById('proj-count').textContent = `${filtered.length} โครงการ`;
+  applyEditState();
+};
+
+window.editProjInline = function(docId) {
+  const p = projectsData.find(x=>x.docId===docId);
+  if (!p) return;
+  const row = document.getElementById('row-'+docId);
+  if (!row) return;
+  row.innerHTML = `
+    <td style="font-size:10px;color:var(--text3);">${p.plantId}</td>
+    <td><input class="form-input" id="e-name-${docId}" value="${p.name}" style="height:26px;font-size:11px;min-width:180px;"></td>
+    <td style="font-size:10px;color:var(--text3);">${BRAND_CFG[p.brand]?.label||p.brand}</td>
+    <td><input class="qty-input" id="e-seg-${docId}" type="number" value="${p.segment||0}" style="width:44px;"></td>
+    <td><input class="qty-input" id="e-unit-${docId}" type="number" value="${p.totalUnit||0}" style="width:56px;"></td>
+    <td><input class="qty-input" id="e-ri-${docId}" type="number" value="${p.remainingInstall||0}" style="width:56px;"></td>
+    <td><input class="qty-input" id="e-fy-${docId}" type="number" step="0.01" value="${p.fcYear||0}" style="width:56px;"></td>
+    <td><input class="form-input" id="e-drive-${docId}" value="${p.driveLink||''}" placeholder="Drive URL" style="height:26px;font-size:11px;min-width:120px;"></td>
+    <td style="display:flex;gap:4px;">
+      <button class="save-btn" onclick="saveProjInline('${docId}')">บันทึก</button>
+      <button class="edit-btn" onclick="cancelProjInline('${docId}')">ยกเลิก</button>
+    </td>`;
+};
+
+window.cancelProjInline = function(docId) {
+  filterProjectsDesktop(document.getElementById('proj-search')?.value||'');
+};
+
+window.saveProjInline = async function(docId) {
+  const name  = document.getElementById('e-name-'+docId)?.value.trim();
+  const seg   = parseInt(document.getElementById('e-seg-'+docId)?.value)||0;
+  const unit  = parseInt(document.getElementById('e-unit-'+docId)?.value)||0;
+  const ri    = parseInt(document.getElementById('e-ri-'+docId)?.value)||0;
+  const fy    = parseFloat(document.getElementById('e-fy-'+docId)?.value)||0;
+  const drive = document.getElementById('e-drive-'+docId)?.value.trim()||'';
+  if (!name) { alert('กรุณากรอกชื่อโครงการ'); return; }
+  const fq = parseFloat((fy/4).toFixed(2));
+  const fm = parseFloat((fy/12).toFixed(2));
+  await updateDoc(doc(db,'projects',docId), {name, segment:seg, totalUnit:unit, remainingInstall:ri, fcYear:fy, fcQuarter:fq, fcMonth:fm, driveLink:drive, updatedAt:serverTimestamp()});
+  const idx = projectsData.findIndex(x=>x.docId===docId);
+  if (idx>=0) Object.assign(projectsData[idx], {name, segment:seg, totalUnit:unit, remainingInstall:ri, fcYear:fy, fcQuarter:fq, fcMonth:fm, driveLink:drive});
+  filterProjectsDesktop(document.getElementById('proj-search')?.value||'');
+};
 window.showBrand = function(key) {
   const cfg = BRAND_CFG[key];
   const projs = projectsData.filter(p => p.brand === key);
@@ -1314,6 +1389,7 @@ window.deleteProject = async function(docId, brandKey) {
   await deleteDoc(doc(db,'projects',docId));
   projectsData = projectsData.filter(x => x.docId !== docId);
   if (brandKey === 'mb') window.renderProjectsMobile();
+  else if (brandKey === 'desktop' || brandKey === 'all') filterProjectsDesktop(document.getElementById('proj-search')?.value||'');
   else showBrand(brandKey);
 };
 
