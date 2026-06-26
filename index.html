@@ -1237,10 +1237,15 @@ function renderInventoryMobile() {
     const cmap={ok:['#EAF3DE','#27500A'],low:['#FAEEDA','#633806'],crit:['#FCEBEB','#A32D2D']};
     const [ibg,ic]=cmap[s.cls.replace('b-','')]||cmap.ok;
     const qc=s.cls==='b-crit'?'color:#E24B4A;':s.cls==='b-low'?'color:#BA7517;':'';
+    const docId=stockData[p.id]?.docId||'';
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);" data-v="${p.vendor==='CIT'?'cit':'other'}">
       <div style="width:34px;height:34px;border-radius:9px;background:${ibg};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-lock" style="font-size:16px;color:${ic};" aria-hidden="true"></i></div>
       <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${p.name}</div><div style="font-size:11px;color:var(--text2);margin-top:1px;">${p.vendor} · ${p.brand}</div></div>
-      <div style="text-align:right;"><div style="font-size:16px;font-weight:500;${qc}">${qty}</div><div style="font-size:10px;color:var(--text3);">min ${p.min}</div>${mbBadge(s.txt,s.cls.replace('b-',''))}</div>
+      <div style="text-align:right;" id="mb-inv-${p.id}">
+        <div style="font-size:16px;font-weight:500;${qc};cursor:pointer;" onclick="mbTapQty('${p.id}','${docId}',${qty})" title="แตะเพื่อแก้ไข">${qty}</div>
+        <div style="font-size:10px;color:var(--text3);">min ${p.min}</div>
+        ${mbBadge(s.txt,s.cls.replace('b-',''))}
+      </div>
     </div>`;
   }).join('');
 
@@ -1254,6 +1259,34 @@ function renderInventoryMobile() {
     </div>
     ${mbBn('inventory')}`;
 }
+
+window.mbTapQty = function(productId, docId, currentQty) {
+  if (!editMode) return;
+  const cell = document.getElementById('mb-inv-'+productId);
+  if (!cell) return;
+  const s = getStatus(productId);
+  const qc = s.cls==='b-crit'?'color:#E24B4A;':s.cls==='b-low'?'color:#BA7517;':'';
+  const p = PRODUCTS.find(x=>x.id===productId);
+  cell.innerHTML = `
+    <input id="mb-qty-inp-${productId}" type="number" value="${currentQty}" min="0"
+      style="width:64px;height:36px;border:1.5px solid #534AB7;border-radius:8px;font-size:16px;font-weight:500;text-align:center;${qc}font-family:var(--font);outline:none;"
+      onkeydown="if(event.key==='Enter')mbSaveQty('${productId}','${docId}')">
+    <div style="display:flex;gap:4px;margin-top:4px;justify-content:flex-end;">
+      <button class="save-btn" style="font-size:10px;padding:2px 8px;" onclick="mbSaveQty('${productId}','${docId}')">บันทึก</button>
+      <button class="edit-btn" style="font-size:10px;padding:2px 8px;" onclick="renderInventoryMobile()">ยกเลิก</button>
+    </div>
+    <div style="font-size:10px;color:var(--text3);">min ${p?.min||0}</div>`;
+  document.getElementById('mb-qty-inp-'+productId)?.focus();
+  document.getElementById('mb-qty-inp-'+productId)?.select();
+};
+
+window.mbSaveQty = async function(productId, docId) {
+  const val = parseInt(document.getElementById('mb-qty-inp-'+productId)?.value)||0;
+  if (docId) await updateDoc(doc(db,'stock',docId),{qty:val,updatedAt:serverTimestamp()});
+  // listener จะ update stockData เอง แต่ re-render ก่อนเพื่อ UX
+  if (stockData[productId]) stockData[productId].qty = val;
+  renderInventoryMobile();
+};
 window.filterInvMobile = function(btn,v) {
   btn.closest('div').querySelectorAll('button[onclick*="filterInvMobile"]').forEach(c=>{c.style.cssText=`font-size:11px;padding:4px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;cursor:pointer;${MB_CHIP}`;});
   btn.style.cssText=`font-size:11px;padding:4px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;cursor:pointer;${MB_CHIP_ON}`;
