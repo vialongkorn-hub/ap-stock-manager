@@ -1275,17 +1275,29 @@ function renderOverviewMobile() {
         ${mbMetric('ยูนิตรวม',totalUnits.toLocaleString())}
         ${mbMetric('เบิกวันนี้',todayW)}
       </div>
-      ${mbCard('โครงการล่าสุด',`
-        ${mbRow('#EEEDFE','#534AB7','diamond','The Palazzo Pinklao','Premium · 85 ยูนิต',`<div style="text-align:right;"><div style="font-size:14px;font-weight:500;color:#534AB7;">92%</div>${mbBadge('พร้อม','ok')}</div>`,'92%','#534AB7')}
-        ${mbRow('#FCEBEB','#A32D2D','alert-circle','ADDRESS Samrong','Premium · 140 ยูนิต',`<div style="text-align:right;"><div style="font-size:14px;font-weight:500;color:#E24B4A;">38%</div>${mbBadge('วิกฤต','crit')}</div>`,'38%','#E24B4A')}
-        ${mbRow('#FAEEDA','#BA7517','home','Life Ladprao Valley','กลาง · 580 ยูนิต',`<div style="text-align:right;"><div style="font-size:14px;font-weight:500;color:#BA7517;">55%</div>${mbBadge('ต่ำ','low')}</div>`,'55%','#BA7517')}
-        <div style="border:none;height:0;"></div>
+      ${mbCard('เบิกล่าสุด',`
+        ${withdrawLog.slice(0,3).map(l=>`
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border);">
+            <div><div style="font-size:13px;font-weight:500;">${l.project||'—'}</div>
+            <div style="font-size:11px;color:var(--text2);">${fmtDate(l.createdAt)}</div></div>
+            <div style="text-align:right;"><div style="font-size:13px;">${l.product||'—'}</div>
+            <div style="font-size:11px;color:var(--text2);">${l.qty||0} ชิ้น</div></div>
+          </div>`).join('')||`<div style="font-size:12px;color:var(--text3);padding:8px 0;">ยังไม่มีการเบิก</div>`}
       `)}
       <div style="background:#EEEDFE;border-radius:10px;padding:10px 13px;">
         <div style="font-size:11px;font-weight:500;color:#3C3489;margin-bottom:4px;"><i class="ti ti-sparkles" aria-hidden="true"></i> AI แนะนำวันนี้</div>
-        <div style="font-size:12px;color:#534AB7;line-height:1.6;">Y02-Knob Q3 ต้องการ 1,151 ชิ้น — ควรสั่งภายใน 2 สัปดาห์</div>
+        <div style="font-size:12px;color:#534AB7;line-height:1.6;">${(()=>{
+          const topBrand = Object.entries(projectsData.reduce((acc,p)=>{
+            acc[p.brand]=(acc[p.brand]||0)+(p.totalUnit||0); return acc;
+          },{})).sort((a,b)=>b[1]-a[1])[0];
+          const critStock = PRODUCTS.filter(p=>getStatus(p.id).cls==='b-crit').map(p=>p.name);
+          return [
+            topBrand?`${BRAND_CFG[topBrand[0]]?.label||topBrand[0]} มียูนิตสูงสุด ${topBrand[1].toLocaleString()} ยูนิต`:'',
+            critStock.length?`สต็อควิกฤต: ${critStock.join(', ')} — ควรเปิด PR ด่วน`:'สต็อคทุกรายการอยู่ในเกณฑ์ดี',
+            `PR เปิดอยู่ ${openPR} รายการ`
+          ].filter(Boolean).join(' · ');
+        })()}</div>
       </div>
-      ${mbCard('<i class="ti ti-transfer-out" aria-hidden="true"></i> เบิกล่าสุด',recentLog)}
     </div>
     ${mbBn('overview')}`;
 }
