@@ -1092,56 +1092,57 @@ window.saveProjInline = async function(docId) {
   if (idx>=0) Object.assign(projectsData[idx], {name, segment:seg, totalUnit:unit, remainingInstall:ri, fcYear:fy, fcQuarter:fq, fcMonth:fm, driveLink:drive});
   filterProjectsDesktop(document.getElementById('proj-search')?.value||'');
 };
+// Global projRowHtml — ใช้ได้จากทุกที่
+window.projRowHtml = function(p, editing=false, brandKey='') {
+  if (editing) {
+    return `<tr id="row-${p.docId}">
+      <td style="font-size:10px;color:var(--text3);">${p.plantId}</td>
+      <td><input class="form-input" id="e-name-${p.docId}" value="${p.name}" style="height:26px;font-size:11px;min-width:180px;"></td>
+      <td><input class="qty-input" id="e-seg-${p.docId}" type="number" value="${p.segment||0}" style="width:44px;"></td>
+      <td><input class="qty-input" id="e-unit-${p.docId}" type="number" value="${p.totalUnit||0}" style="width:56px;"></td>
+      <td><input class="qty-input" id="e-ns-${p.docId}" type="number" value="${p.notStarted||0}" style="width:56px;"></td>
+      <td><input class="qty-input" id="e-ri-${p.docId}" type="number" value="${p.remainingInstall||0}" style="width:56px;"></td>
+      <td><input class="qty-input" id="e-fy-${p.docId}" type="number" step="0.01" value="${p.fcYear||0}" style="width:56px;"></td>
+      <td><input class="qty-input" id="e-fq-${p.docId}" type="number" step="0.01" value="${p.fcQuarter||0}" style="width:56px;"></td>
+      <td><input class="qty-input" id="e-fm-${p.docId}" type="number" step="0.01" value="${p.fcMonth||0}" style="width:56px;"></td>
+      <td><input class="form-input" id="e-drive-${p.docId}" value="${p.driveLink||''}" placeholder="Google Drive URL" style="height:26px;font-size:11px;min-width:160px;"></td>
+      <td style="display:flex;gap:4px;">
+        <button class="save-btn" onclick="saveProject('${p.docId}','${brandKey}')">บันทึก</button>
+        <button class="edit-btn" onclick="cancelEditProject('${p.docId}','${brandKey}')">ยกเลิก</button>
+      </td>
+    </tr>`;
+  }
+  const driveBtn = p.driveLink ? `<a href="${p.driveLink}" target="_blank" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#534AB7;text-decoration:none;padding:2px 6px;border:1px solid #534AB7;border-radius:4px;"><i class="ti ti-brand-google-drive"></i> ผัง</a>` : '<span style="font-size:10px;color:var(--text3);">—</span>';
+  return `<tr id="row-${p.docId}">
+    <td style="font-size:10px;color:var(--text3);">${p.plantId}</td>
+    <td><strong>${p.name}</strong></td>
+    <td>${p.segment||'—'}</td>
+    <td>${p.totalUnit||0}</td>
+    <td>${p.notStarted||0}</td>
+    <td>${p.remainingInstall||0}</td>
+    <td>${p.fcYear||0}</td>
+    <td>${p.fcQuarter||0}</td>
+    <td>${p.fcMonth||0}</td>
+    <td>${driveBtn}</td>
+    <td style="display:flex;gap:4px;">
+      <button class="edit-btn" data-edit onclick="editProjectRow('${p.docId}','${brandKey}')">แก้ไข</button>
+      <button class="edit-btn" data-edit onclick="toggleHTDesktop('${p.docId}','${brandKey}')">Type</button>
+      <button class="del-btn" data-edit onclick="deleteProject('${p.docId}','${brandKey}')"><i class="ti ti-trash"></i></button>
+    </td>
+  </tr>
+  <tr id="ht-row-${p.docId}" style="display:none;">
+    <td colspan="11" style="padding:0;">
+      <div id="ht-inner-${p.docId}" style="padding:12px 16px;background:var(--bg3);border-top:1px solid var(--border);"></div>
+    </td>
+  </tr>`;
+};
+
 window.showBrand = function(key) {
   const cfg = BRAND_CFG[key];
   const projs = projectsData.filter(p => p.brand === key);
   document.getElementById('brand-level').style.display = 'none';
   const det = document.getElementById('proj-detail');
   det.style.display = 'flex';
-
-  function projRowHtml(p, editing=false, brandKey=key) {
-    if (editing) {
-      return `<tr id="row-${p.docId}">
-        <td style="font-size:10px;color:var(--text3);">${p.plantId}</td>
-        <td><input class="form-input" id="e-name-${p.docId}" value="${p.name}" style="height:26px;font-size:11px;min-width:180px;"></td>
-        <td><input class="qty-input" id="e-seg-${p.docId}" type="number" value="${p.segment||0}" style="width:44px;"></td>
-        <td><input class="qty-input" id="e-unit-${p.docId}" type="number" value="${p.totalUnit||0}" style="width:56px;"></td>
-        <td><input class="qty-input" id="e-ns-${p.docId}" type="number" value="${p.notStarted||0}" style="width:56px;"></td>
-        <td><input class="qty-input" id="e-ri-${p.docId}" type="number" value="${p.remainingInstall||0}" style="width:56px;"></td>
-        <td><input class="qty-input" id="e-fy-${p.docId}" type="number" step="0.01" value="${p.fcYear||0}" style="width:56px;"></td>
-        <td><input class="qty-input" id="e-fq-${p.docId}" type="number" step="0.01" value="${p.fcQuarter||0}" style="width:56px;"></td>
-        <td><input class="qty-input" id="e-fm-${p.docId}" type="number" step="0.01" value="${p.fcMonth||0}" style="width:56px;"></td>
-        <td><input class="form-input" id="e-drive-${p.docId}" value="${p.driveLink||''}" placeholder="Google Drive URL" style="height:26px;font-size:11px;min-width:160px;"></td>
-        <td style="display:flex;gap:4px;">
-          <button class="save-btn" onclick="saveProject('${p.docId}','${key}')">บันทึก</button>
-          <button class="edit-btn" onclick="cancelEditProject('${p.docId}','${key}')">ยกเลิก</button>
-        </td>
-      </tr>`;
-    }
-    const driveBtn = p.driveLink ? `<a href="${p.driveLink}" target="_blank" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#534AB7;text-decoration:none;padding:2px 6px;border:1px solid #534AB7;border-radius:4px;"><i class="ti ti-brand-google-drive"></i> ผัง</a>` : '<span style="font-size:10px;color:var(--text3);">—</span>';
-    return `<tr id="row-${p.docId}">
-      <td style="font-size:10px;color:var(--text3);">${p.plantId}</td>
-      <td><strong>${p.name}</strong></td>
-      <td>${p.segment||'—'}</td>
-      <td>${p.totalUnit||0}</td>
-      <td>${p.notStarted||0}</td>
-      <td>${p.remainingInstall||0}</td>
-      <td>${p.fcYear||0}</td>
-      <td>${p.fcQuarter||0}</td>
-      <td>${p.fcMonth||0}</td>
-      <td>${driveBtn}</td>
-      <td style="display:flex;gap:4px;">
-        <button class="edit-btn" data-edit onclick="editProjectRow('${p.docId}','${key}')">แก้ไข</button>
-        <button class="edit-btn" data-edit onclick="toggleHTDesktop('${p.docId}','${key}')">Type</button>
-        <button class="del-btn" data-edit onclick="deleteProject('${p.docId}','${key}')"><i class="ti ti-trash"></i></button>
-      </td>
-    </tr>
-    <tr id="ht-row-${p.docId}" style="display:none;">
-      <td colspan="11" style="padding:0;">
-        <div id="ht-inner-${p.docId}" style="padding:12px 16px;background:var(--bg3);border-top:1px solid var(--border);"></div>
-      </td>
-    </tr>`;
-  }
 
   det.innerHTML = `
     <button class="back-btn" onclick="window.renderProjects()"><i class="ti ti-arrow-left"></i> กลับ Brand level</button>
