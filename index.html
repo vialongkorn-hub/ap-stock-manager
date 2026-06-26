@@ -983,28 +983,31 @@ window.renderProjects = function renderProjects() {
     </tr>`).join('');
   const brandOptions = Object.entries(BRAND_CFG).map(([k,d])=>`<option value="${k}">${d.label}</option>`).join('');
   document.getElementById('main-content').innerHTML = `
-    <div class="card">
-      <div class="card-hd"><i class="ti ti-building"></i> Brand Level — กดเพื่อดูโครงการ</div>
-      <table><thead><tr><th>Brand</th><th>โครงการ</th><th>ยูนิตรวม</th><th></th></tr></thead>
-      <tbody>${rows}</tbody></table>
+    <div id="brand-level">
+      <div class="card">
+        <div class="card-hd"><i class="ti ti-building"></i> Brand Level — กดเพื่อดูโครงการ</div>
+        <table><thead><tr><th>Brand</th><th>โครงการ</th><th>ยูนิตรวม</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>
+      <div class="card edit-only" id="add-proj-card" style="opacity:0.35;pointer-events:none;">
+        <div class="card-hd"><i class="ti ti-plus" style="color:var(--purple);"></i> เพิ่มโครงการใหม่</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;">
+          <div class="form-group" style="margin:0;"><div class="form-label">Plant ID</div><input class="form-input" data-edit id="np-plant" placeholder="เช่น 4200"></div>
+          <div class="form-group" style="margin:0;"><div class="form-label">ชื่อโครงการ</div><input class="form-input" data-edit id="np-name" placeholder="ชื่อโครงการ"></div>
+          <div class="form-group" style="margin:0;"><div class="form-label">Brand</div><select class="form-select" data-edit id="np-brand">${brandOptions}</select></div>
+          <div class="form-group" style="margin:0;"><div class="form-label">Segment</div><input class="form-input" data-edit id="np-seg" type="number" placeholder="1-4" min="1" max="4"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;">
+          <div class="form-group" style="margin:0;"><div class="form-label">Total Unit</div><input class="form-input" data-edit id="np-unit" type="number" placeholder="0"></div>
+          <div class="form-group" style="margin:0;"><div class="form-label">ไม่ก่อสร้าง</div><input class="form-input" data-edit id="np-ns" type="number" placeholder="0"></div>
+          <div class="form-group" style="margin:0;"><div class="form-label">เหลือติดตั้ง</div><input class="form-input" data-edit id="np-ri" type="number" placeholder="0"></div>
+          <div class="form-group" style="margin:0;"><div class="form-label">FC/ปี</div><input class="form-input" data-edit id="np-fy" type="number" step="0.01" placeholder="0"></div>
+          <div class="form-group" style="margin:0;"><div class="form-label">FC/Q</div><input class="form-input" data-edit id="np-fq" type="number" step="0.01" placeholder="0"></div>
+        </div>
+        <button class="tb-btn primary" data-edit onclick="addProject()"><i class="ti ti-plus"></i> เพิ่มโครงการ</button>
+      </div>
     </div>
-    <div class="card edit-only" id="add-proj-card" style="opacity:0.35;pointer-events:none;">
-      <div class="card-hd"><i class="ti ti-plus" style="color:var(--purple);"></i> เพิ่มโครงการใหม่</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;">
-        <div class="form-group" style="margin:0;"><div class="form-label">Plant ID</div><input class="form-input" data-edit id="np-plant" placeholder="เช่น 4200"></div>
-        <div class="form-group" style="margin:0;"><div class="form-label">ชื่อโครงการ</div><input class="form-input" data-edit id="np-name" placeholder="ชื่อโครงการ"></div>
-        <div class="form-group" style="margin:0;"><div class="form-label">Brand</div><select class="form-select" data-edit id="np-brand">${brandOptions}</select></div>
-        <div class="form-group" style="margin:0;"><div class="form-label">Segment</div><input class="form-input" data-edit id="np-seg" type="number" placeholder="1-4" min="1" max="4"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;">
-        <div class="form-group" style="margin:0;"><div class="form-label">Total Unit</div><input class="form-input" data-edit id="np-unit" type="number" placeholder="0"></div>
-        <div class="form-group" style="margin:0;"><div class="form-label">ไม่ก่อสร้าง</div><input class="form-input" data-edit id="np-ns" type="number" placeholder="0"></div>
-        <div class="form-group" style="margin:0;"><div class="form-label">เหลือติดตั้ง</div><input class="form-input" data-edit id="np-ri" type="number" placeholder="0"></div>
-        <div class="form-group" style="margin:0;"><div class="form-label">FC/ปี</div><input class="form-input" data-edit id="np-fy" type="number" step="0.01" placeholder="0"></div>
-        <div class="form-group" style="margin:0;"><div class="form-label">FC/Q</div><input class="form-input" data-edit id="np-fq" type="number" step="0.01" placeholder="0"></div>
-      </div>
-      <button class="tb-btn primary" data-edit onclick="addProject()"><i class="ti ti-plus"></i> เพิ่มโครงการ</button>
-    </div>`;
+    <div id="proj-detail" style="display:none;flex-direction:column;gap:12px;"></div>`;
   applyEditState();
   const card = document.getElementById('add-proj-card');
   if (card) { card.style.opacity = editMode?'1':'0.35'; card.style.pointerEvents = editMode?'':'none'; }
