@@ -1100,7 +1100,8 @@ window.deleteProject = async function(docId, brandKey) {
   if (!confirm(`ลบ "${p.name}" ออกจากระบบ?\nไม่สามารถกู้คืนได้`)) return;
   await deleteDoc(doc(db,'projects',docId));
   projectsData = projectsData.filter(x => x.docId !== docId);
-  showBrand(brandKey);
+  if (brandKey === 'mb') window.renderProjectsMobile();
+  else showBrand(brandKey);
 };
 
 function renderSpec() {
@@ -1359,23 +1360,109 @@ window.renderProjectsMobile = function() {
   const total = projectsData.length;
   const hd=mbHd('โครงการ',`${total} โครงการ · 7 Brands`,'',chipBar);
   const maxFc = Math.max(...projectsData.map(p=>p.fcYear||0), 1);
+
   const rows = projectsData.map(p=>{
     const cfg = BRAND_CFG[p.brand]||BRAND_CFG.pleno;
     const progW = Math.round((p.fcYear||0)/maxFc*100)+'%';
-    return {brand:p.brand, html:`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);">
-      <div style="width:34px;height:34px;border-radius:9px;background:${cfg.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-home" style="font-size:16px;color:${cfg.color};" aria-hidden="true"></i></div>
-      <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${p.name}</div>
-      <div style="font-size:11px;color:var(--text2);margin-top:1px;">${p.plantId} · ${p.totalUnit||0} ยูนิต · <span style="background:${cfg.bg};color:${cfg.color};font-size:10px;padding:1px 6px;border-radius:999px;">${cfg.label}</span></div>
-      <div style="height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:4px;"><div style="height:100%;width:${progW};background:${cfg.color};border-radius:2px;"></div></div></div>
-      <div style="font-size:14px;font-weight:500;color:${cfg.color};">${p.fcYear||0}</div>
-    </div>`};
+    return {brand:p.brand, html:`
+      <div style="padding:10px 0;border-bottom:0.5px solid var(--border);" id="mb-proj-${p.docId}" data-docid="${p.docId}">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:34px;height:34px;border-radius:9px;background:${cfg.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="ti ti-home" style="font-size:16px;color:${cfg.color};" aria-hidden="true"></i>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:500;">${p.name}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:1px;">${p.plantId} · ${p.totalUnit||0} ยูนิต · <span style="background:${cfg.bg};color:${cfg.color};font-size:10px;padding:1px 6px;border-radius:999px;">${cfg.label}</span></div>
+            <div style="height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:4px;"><div style="height:100%;width:${progW};background:${cfg.color};border-radius:2px;"></div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <div style="font-size:14px;font-weight:500;color:${cfg.color};">${p.fcYear||0}</div>
+            <div style="display:flex;gap:4px;">
+              <button class="edit-btn" data-edit style="font-size:10px;" onclick="mbEditProj('${p.docId}')">แก้ไข</button>
+              <button class="del-btn" data-edit onclick="deleteProject('${p.docId}','mb')"><i class="ti ti-trash" style="font-size:12px;"></i></button>
+            </div>
+          </div>
+        </div>
+        <div id="mb-edit-${p.docId}" style="display:none;margin-top:10px;display:none;flex-direction:column;gap:6px;">
+          <input class="form-input" id="mb-name-${p.docId}" value="${p.name}" placeholder="ชื่อโครงการ" style="height:34px;font-size:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <input class="form-input" id="mb-seg-${p.docId}" type="number" value="${p.segment||0}" placeholder="Segment" style="height:34px;font-size:12px;">
+            <input class="form-input" id="mb-unit-${p.docId}" type="number" value="${p.totalUnit||0}" placeholder="Total Unit" style="height:34px;font-size:12px;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <input class="form-input" id="mb-ns-${p.docId}" type="number" value="${p.notStarted||0}" placeholder="ไม่ก่อสร้าง" style="height:34px;font-size:12px;">
+            <input class="form-input" id="mb-ri-${p.docId}" type="number" value="${p.remainingInstall||0}" placeholder="เหลือติดตั้ง" style="height:34px;font-size:12px;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+            <input class="form-input" id="mb-fy-${p.docId}" type="number" step="0.01" value="${p.fcYear||0}" placeholder="FC/ปี" style="height:34px;font-size:12px;">
+            <input class="form-input" id="mb-fq-${p.docId}" type="number" step="0.01" value="${p.fcQuarter||0}" placeholder="FC/Q" style="height:34px;font-size:12px;">
+            <input class="form-input" id="mb-fm-${p.docId}" type="number" step="0.01" value="${p.fcMonth||0}" placeholder="FC/เดือน" style="height:34px;font-size:12px;">
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="save-btn" style="flex:1;height:34px;font-size:12px;" onclick="mbSaveProj('${p.docId}')">บันทึก</button>
+            <button class="edit-btn" style="flex:1;height:34px;font-size:12px;" onclick="mbCancelProj('${p.docId}')">ยกเลิก</button>
+          </div>
+        </div>
+      </div>`};
   });
+
+  const brandOptions = Object.entries(BRAND_CFG).map(([k,d])=>`<option value="${k}">${d.label}</option>`).join('');
+
   document.getElementById('main-content').innerHTML = `
     ${hd}
-    <div style="padding:12px 14px;overflow-y:auto;flex:1;">
+    <div style="padding:12px 14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px;">
       ${mbCard('',`<div id="proj-rows-mb">${rows.map(({brand,html})=>`<div data-brand="${brand}">${html}</div>`).join('')}</div>`)}
+      ${mbCard(`<i class="ti ti-plus" style="color:#534AB7;"></i> เพิ่มโครงการใหม่`,`
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <input class="form-input" data-edit id="np-plant" placeholder="Plant ID เช่น 4200" style="height:34px;font-size:12px;">
+            <select class="form-select" data-edit id="np-brand" style="height:34px;font-size:12px;">${brandOptions}</select>
+          </div>
+          <input class="form-input" data-edit id="np-name" placeholder="ชื่อโครงการ" style="height:34px;font-size:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <input class="form-input" data-edit id="np-seg" type="number" placeholder="Segment 1-4" style="height:34px;font-size:12px;">
+            <input class="form-input" data-edit id="np-unit" type="number" placeholder="Total Unit" style="height:34px;font-size:12px;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <input class="form-input" data-edit id="np-ri" type="number" placeholder="เหลือติดตั้ง" style="height:34px;font-size:12px;">
+            <input class="form-input" data-edit id="np-fy" type="number" step="0.01" placeholder="FC/ปี" style="height:34px;font-size:12px;">
+          </div>
+          <button class="tb-btn primary" data-edit style="width:100%;justify-content:center;height:38px;font-size:13px;margin-top:2px;" onclick="addProject()">
+            <i class="ti ti-plus"></i> เพิ่มโครงการ
+          </button>
+        </div>
+      `)}
     </div>
     ${mbBn('projects')}`;
+  applyEditState();
+};
+
+window.mbEditProj = function(docId) {
+  const editDiv = document.getElementById('mb-edit-'+docId);
+  if (editDiv) { editDiv.style.display='flex'; editDiv.style.flexDirection='column'; }
+};
+window.mbCancelProj = function(docId) {
+  const editDiv = document.getElementById('mb-edit-'+docId);
+  if (editDiv) editDiv.style.display='none';
+};
+window.mbSaveProj = async function(docId) {
+  const name = document.getElementById('mb-name-'+docId)?.value.trim();
+  const seg  = parseInt(document.getElementById('mb-seg-'+docId)?.value)||0;
+  const unit = parseInt(document.getElementById('mb-unit-'+docId)?.value)||0;
+  const ns   = parseInt(document.getElementById('mb-ns-'+docId)?.value)||0;
+  const ri   = parseInt(document.getElementById('mb-ri-'+docId)?.value)||0;
+  const fy   = parseFloat(document.getElementById('mb-fy-'+docId)?.value)||0;
+  const fq   = parseFloat(document.getElementById('mb-fq-'+docId)?.value)||0;
+  const fm   = parseFloat(document.getElementById('mb-fm-'+docId)?.value)||0;
+  if (!name) { alert('กรุณากรอกชื่อโครงการ'); return; }
+  await updateDoc(doc(db,'projects',docId), {
+    name, segment:seg, totalUnit:unit, notStarted:ns,
+    remainingInstall:ri, fcYear:fy, fcQuarter:fq, fcMonth:fm,
+    updatedAt:serverTimestamp()
+  });
+  const idx = projectsData.findIndex(x => x.docId === docId);
+  if (idx >= 0) Object.assign(projectsData[idx], {name, segment:seg, totalUnit:unit, notStarted:ns, remainingInstall:ri, fcYear:fy, fcQuarter:fq, fcMonth:fm});
+  window.renderProjectsMobile();
 };
 window.filterProjMobile = function(btn, brand) {
   btn.closest('div').querySelectorAll('button[onclick*="filterProjMobile"]').forEach(c=>{
