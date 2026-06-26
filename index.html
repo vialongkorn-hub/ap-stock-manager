@@ -303,33 +303,11 @@ const BRAND_ITEMS = {
   bkme:['J03','A100'], bkmc:['J03','A100'], api:['A2H','EST'], dist:['J03P'],
 };
 
-const ALL_PROJECTS = [
-  {id:'4137',name:'Pleno สุขสวัสดิ์-ประชาอุทิศ60',brand:'pleno'},
-  {id:'4166',name:'Pleno Town ลำลูกกาคลอง7',brand:'pleno'},
-  {id:'4134',name:'Pleno Town สุขุมวิท-บางปู',brand:'pleno'},
-  {id:'7061',name:'Pleno ติวานนท์',brand:'pleno'},
-  {id:'4074',name:'Pleno พหลโยธิน-ลำลูกกา',brand:'pleno'},
-  {id:'4178',name:'Pleno Town รังสิต-คลอง2',brand:'pleno'},
-  {id:'4072',name:'Pleno Town บางนา',brand:'pleno'},
-  {id:'4092',name:'Grande Pleno พหลฯ-วิภาวดี2',brand:'grande'},
-  {id:'4102',name:'Grande Pleno รามอินทรา-จตุโชติ',brand:'grande'},
-  {id:'7030',name:'Grande Pleno ราชพฤกษ์',brand:'grande'},
-  {id:'7114',name:'Grande Pleno พระราม9-มอเตอร์เวย์',brand:'grande'},
-  {id:'4076',name:'BKM วิภาวดี-แจ้งวัฒนะ',brand:'bkm'},
-  {id:'7053',name:'BKM ราชพฤกษ์-สาทร',brand:'bkm'},
-  {id:'7069',name:'BKM รามอินทรา83 สเตชั่น',brand:'bkm'},
-  {id:'4100',name:'BKM The Edition ศรีนครินทร์',brand:'bkme'},
-  {id:'4164',name:'BKM The Edition สาทร-กัลปพฤกษ์2',brand:'bkme'},
-  {id:'WA04',name:'BKM The Edition พระราม9-พัฒนาการ2',brand:'bkme'},
-  {id:'4116',name:'BKM Classe รัชโยธิน',brand:'bkmc'},
-  {id:'2029',name:'Apitown เชียงราย',brand:'api'},
-  {id:'2031',name:'Apitown อยุธยา',brand:'api'},
-  {id:'2047',name:'Apitown ฉะเชิงเทรา',brand:'api'},
-  {id:'2049',name:'Apitown นครปฐม',brand:'api'},
-  {id:'2054',name:'Apitown ระยอง2',brand:'api'},
-  {id:'2056',name:'District พหลโยธิน-วิภาวดี',brand:'dist'},
-  {id:'7164',name:'District บางนา กม.5',brand:'dist'},
-];
+// ALL_PROJECTS is now derived from projectsData (loaded from Firebase)
+// kept as getter so existing code (withdraw search, PR dropdown) still works
+function getAllProjects() {
+  return projectsData.map(p => ({id: p.plantId, name: p.name, brand: p.brand}));
+}
 
 const STATUS_MAP = {open:{cls:'b-pr-open',txt:'เปิด PR'},wait:{cls:'b-pr-wait',txt:'รอของเข้า'},done:{cls:'b-pr-done',txt:'เข้าคลังสำเร็จ'}};
 const NEXT_STATUS = {open:'wait',wait:'done'};
@@ -348,7 +326,176 @@ async function initFirestore() {
   }
 }
 
+async function seedProjects() {
+  const snap = await getDocs(collection(db, 'projects'));
+  if (!snap.empty) return; // already seeded
+  const rows = [
+    ['2018','BKM รามอินทรา','BKM','TH',4,261,0,19,19,5.43,1.36,0.45],
+    ['2029','Apitown เชียงราย','Apitown','TH',3,146,25,29,54,8.29,2.07,0.69],
+    ['2031','Apitown อยุธยา','Apitown','TH',3,441,42,97,139,27.71,6.93,2.31],
+    ['2033','Pleno ไทยรามัญ2','Pleno','TH',1,286,286,0,286,0,0,0],
+    ['2047','Apitown ฉะเชิงเทรา','Apitown','TH',3,444,66,145,211,41.43,10.36,3.45],
+    ['2049','Apitown นครปฐม','Apitown','TH',3,232,0,127,127,36.29,9.07,3.02],
+    ['2051','Apitown นครสวรรค์','Apitown','TH',3,226,37,80,117,22.86,5.71,1.90],
+    ['2053','Apitown สุพรรณบุรี','Apitown','TH',3,189,12,79,91,22.57,5.64,1.88],
+    ['2054','Apitown ระยอง2','Apitown','TH',3,257,69,97,166,27.71,6.93,2.31],
+    ['2055','Apitown พิษณุโลก','Apitown','TH',3,205,101,60,161,17.14,4.29,1.43],
+    ['2056','District พหลโยธิน-วิภาวดี','District','TH',4,20,0,5,5,1.43,0.36,0.12],
+    ['2057','Apitown ราชบุรี','Apitown','TH',3,294,143,101,244,28.86,7.21,2.40],
+    ['2063','Apitown หัวหิน','Apitown','TH',2,163,136,27,163,7.71,1.93,0.64],
+    ['2064','Apitown สระบุรี','Apitown','TH',2,153,123,30,153,8.57,2.14,0.71],
+    ['2065','Apitown ฉะเชิงเทรา2','Apitown','TH',2,252,228,24,252,6.86,1.71,0.57],
+    ['2066','Apitown จันทบุรี','Apitown','TH',2,235,210,25,235,7.14,1.79,0.60],
+    ['2067','Apitown ชลบุรี-บางแสน','Apitown','TH',1,84,84,0,84,0,0,0],
+    ['2069','Apitown สุพรรณบุรี2','Apitown','TH',1,127,127,0,127,0,0,0],
+    ['2070','Apitown ตรัง','Apitown','TH',1,282,282,0,282,0,0,0],
+    ['2071','Apitown บุรีรัมย์','Apitown','TH',1,380,380,0,380,0,0,0],
+    ['2072','Apitown กาญจนบุรี','Apitown','TH',1,343,343,0,343,0,0,0],
+    ['2073','Apitown เพชรบุรี','Apitown','TH',1,289,289,0,289,0,0,0],
+    ['4066','BKM The Edition พหลฯ-รามอินทรา','BKM The Edition','TH',3,64,16,0,16,0,0,0],
+    ['4069','BKM ลาดพร้าว101 สเตชั่น','BKM','TH',4,143,0,41,41,11.71,2.93,0.98],
+    ['4072','Pleno Town บางนา','Pleno','TH',3,351,0,83,83,23.71,5.93,1.98],
+    ['4074','Pleno พหลโยธิน-ลำลูกกา','Pleno','TH',3,467,18,19,37,5.43,1.36,0.45],
+    ['4075','Pleno Town ปิ่นเกล้า-สาย5','Pleno','TH',3,452,57,134,191,38.29,9.57,3.19],
+    ['4076','BKM วิภาวดี-แจ้งวัฒนะ','BKM','TH',3,298,0,133,133,38,9.5,3.17],
+    ['4078','Pleno ติวานนท์-แจ้งวัฒนะ2','Pleno','TH',4,208,0,28,28,8,2,0.67],
+    ['4079','Pleno สุขสวัสดิ์-ประชาอุทิศ76','Pleno','TH',3,235,0,40,40,11.43,2.86,0.95],
+    ['4080','Pleno Town สุขุมวิท-เทพารักษ์','Pleno','TH',4,215,0,6,6,1.71,0.43,0.14],
+    ['4083','BKM พหลโยธิน-วิภาวดี','BKM','TH',3,245,0,61,61,17.43,4.36,1.45],
+    ['4084','Pleno Town เวสต์เกต','Pleno','TH',3,363,6,77,83,22,5.5,1.83],
+    ['4085','BKM The Edition ประชาชื่น-งามวงศ์วาน','BKM The Edition','TH',3,88,0,33,33,9.43,2.36,0.79],
+    ['4092','Grande Pleno พหลโยธิน-วิภาวดี2','Grande Pleno','TH',4,285,0,41,41,11.71,2.93,0.98],
+    ['4097','Pleno Town ลำลูกกา คลอง5','Pleno','TH',4,283,0,1,1,0.29,0.07,0.02],
+    ['4098','Pleno Town ราชพฤกษ์-345','Pleno','TH',3,382,0,144,144,41.14,10.29,3.43],
+    ['4100','BKM The Edition ศรีนครินทร์-สวนหลวง','BKM The Edition','TH',3,275,123,89,212,25.43,6.36,2.12],
+    ['4101','Pleno ประชาอุทิศ-สุขสวัสดิ์','Pleno','TH',3,134,24,54,78,15.43,3.86,1.29],
+    ['4102','Grande Pleno รามอินทรา-จตุโชติ','Grande Pleno','TH',3,378,79,133,212,38,9.5,3.17],
+    ['4107','Pleno Town บ้านกล้วย-กาญจนาฯ','Pleno','TH',3,226,0,53,53,15.14,3.79,1.26],
+    ['4108','Pleno Town ปิ่นเกล้า-กาญจนาฯ','Pleno','TH',3,394,80,155,235,44.29,11.07,3.69],
+    ['4111','BKM พระราม5','BKM','TH',3,158,2,64,66,18.29,4.57,1.52],
+    ['4112','Grande Pleno ปิ่นเกล้า-กาญจนาฯ','Grande Pleno','TH',3,262,64,101,165,28.86,7.21,2.40],
+    ['4113','Grande Pleno บางใหญ่','Grande Pleno','TH',4,84,0,18,18,5.14,1.29,0.43],
+    ['4116','BKM The Classe รัชโยธิน','BKM The Classe','TH',3,62,0,9,9,2.57,0.64,0.21],
+    ['4118','BKM The Edition สุขสวัสดิ์','BKM The Edition','TH',3,100,10,41,51,11.71,2.93,0.98],
+    ['4123','Grande Pleno เวสต์เกต2','Grande Pleno','TH',1,152,152,0,152,0,0,0],
+    ['4124','Pleno เวสต์เกต2','Pleno','TH',1,170,170,0,170,0,0,0],
+    ['4128','Grande Pleno รามอินทรา บางชัน สเตชั่น','Grande Pleno','TH',3,123,0,54,54,15.43,3.86,1.29],
+    ['4129','Pleno Town รังสิต คลอง4-วงแหวน','Pleno','TH',3,299,26,159,185,45.43,11.36,3.79],
+    ['4130','Pleno Town ประชาอุทิศ90','Pleno','TH',3,414,224,127,351,36.29,9.07,3.02],
+    ['4131','Pleno Town ประชาอุทิศ90(2)','Pleno','TH',1,56,56,0,56,0,0,0],
+    ['4132','Pleno ประชาอุทิศ90(3) จัดสรรเล็ก','Pleno','TH',1,10,10,0,10,0,0,0],
+    ['4133','Pleno รามอินทรา-บางชันสเตชั่น2','Pleno','TH',3,164,0,79,79,22.57,5.64,1.88],
+    ['4134','Pleno Town สุขุมวิท-บางปู','Pleno','TH',3,457,199,122,321,34.86,8.71,2.90],
+    ['4136','Grande Pleno วัชรพล-จตุโชติ10','Grande Pleno','TH',3,76,2,31,33,8.86,2.21,0.74],
+    ['4137','Pleno สุขสวัสดิ์-ประชาอุทิศ60','Pleno','TH',3,226,2,91,93,26,6.5,2.17],
+    ['4139','Grande Pleno แจ้งวัฒนะ-ราชพฤกษ์','Grande Pleno','TH',3,190,60,78,138,22.29,5.57,1.86],
+    ['4140','BKM Classe รัชดา-ลาดพร้าว','BKM The Classe','TH',3,38,0,26,26,7.43,1.86,0.62],
+    ['4141','BKM North ราชพฤกษ์','BKM','TH',3,136,32,52,84,14.86,3.71,1.24],
+    ['4142','Pleno ดอนเมือง','Pleno','TH',4,154,0,24,24,6.86,1.71,0.57],
+    ['4144','Pleno เพชรเกษม91','Pleno','TH',3,283,44,149,193,42.57,10.64,3.55],
+    ['4146','Pleno Town ติวานนท์-รังสิต','Pleno','TH',3,357,101,133,234,38,9.5,3.17],
+    ['4148','Grande Pleno สุขสวัสดิ์64','Grande Pleno','TH',3,158,2,82,84,23.43,5.86,1.95],
+    ['4150','Pleno Town วงแหวน-รังสิต คลอง7','Pleno','TH',3,279,69,128,197,36.57,9.14,3.05],
+    ['4151','Pleno บางนา-เทพารักษ์','Pleno','TH',3,211,21,95,116,27.14,6.79,2.26],
+    ['4152','Pleno พระราม9-กรุงเทพกรีฑา3','Pleno','TH',4,160,0,45,45,12.86,3.21,1.07],
+    ['4155','Pleno วิภาวดี-รังสิต','Pleno','TH',3,333,26,195,221,55.71,13.93,4.64],
+    ['4156','Grande Pleno วิภาวดี-รังสิต','Grande Pleno','TH',3,110,12,62,74,17.71,4.43,1.48],
+    ['4157','Pleno เมืองเอก (โครงการ3)','Pleno','TH',1,299,299,0,299,0,0,0],
+    ['4163','Grande Pleno ทวีวัฒนา','Grande Pleno','TH',3,240,122,84,206,24,6,2],
+    ['4164','BKM The Edition สาทร-กัลปพฤกษ์2','BKM The Edition','TH',3,144,39,78,117,22.29,5.57,1.86],
+    ['4165','BKM The Edition วิภาวดี','BKM The Edition','TH',3,133,50,66,116,18.86,4.71,1.57],
+    ['4166','Pleno Town ลำลูกกาคลอง7-วงแหวน','Pleno','TH',3,495,215,203,418,58,14.5,4.83],
+    ['4167','BKM สาทร-กัลปพฤกษ์2','BKM','TH',2,217,161,56,217,16,4,1.33],
+    ['4169','Pleno ราชพฤกษ์2','Pleno','TH',3,175,12,118,130,33.71,8.43,2.81],
+    ['4170','Pleno Town ธรรมศาสตร์ (ซอยคชสาร)','Pleno','TH',1,314,314,0,314,0,0,0],
+    ['4171','BKM ปิ่นเกล้า-บรมฯ','BKM','TH',3,127,46,62,108,17.71,4.43,1.48],
+    ['4172','Pleno พระราม3-สุขสวัสดิ์30','Pleno','TH',3,135,0,97,97,27.71,6.93,2.31],
+    ['4173','Pleno แจ้งวัฒนะ','Pleno','TH',3,85,0,52,52,14.86,3.71,1.24],
+    ['4174','Pleno แพรกษา-สุขุมวิท','Pleno','TH',2,294,215,79,294,22.57,5.64,1.88],
+    ['4176','Pleno แจ้งวัฒนะ-ติวานนท์','Pleno','TH',3,216,58,129,187,36.86,9.21,3.07],
+    ['4177','Pleno Town ลาดกระบัง-สุวรรณภูมิ','Pleno','TH',3,355,209,88,297,25.14,6.29,2.10],
+    ['4178','Pleno Town รังสิต-คลอง2','Pleno','TH',3,497,314,126,440,36,9,3],
+    ['4179','Pleno Town ธรรมศาสตร์-รังสิต','Pleno','TH',3,301,122,131,253,37.43,9.36,3.12],
+    ['4181','Pleno Town แจ้งวัฒนะ-345','Pleno','TH',3,183,27,137,164,39.14,9.79,3.26],
+    ['4182','Grande Pleno สุขุมวิท-แพรกษา','Grande Pleno','TH',3,200,116,63,179,18,4.5,1.5],
+    ['4185','Pleno ฟิวเจอร์-รังสิต','Pleno','TH',3,351,218,90,308,25.71,6.43,2.14],
+    ['4186','BKM ปิ่นเกล้า-จรัญฯ2','BKM','TH',3,124,50,50,100,14.29,3.57,1.19],
+    ['4191','Pleno แพรกษา-สุขุมวิท2','Pleno','TH',1,388,388,0,388,0,0,0],
+    ['4192','Pleno Town เอกชัย-บางบอน','Pleno','TH',2,411,259,152,411,43.43,10.86,3.62],
+    ['4194','Grande Pleno ปิ่นเกล้า-จรัญฯ2','Grande Pleno','TH',2,70,54,16,70,4.57,1.14,0.38],
+    ['4195','BKM ศรีนครินทร์-บางนา','BKM','TH',2,322,253,69,322,19.71,4.93,1.64],
+    ['7030','Grande Pleno ราชพฤกษ์','Grande Pleno','TH',3,373,0,8,8,2.29,0.57,0.19],
+    ['7037','BKM The Edition สาทร-สุขสวัสดิ์','BKM The Edition','TH',3,299,33,49,82,14,3.5,1.17],
+    ['7044','Pleno รัตนาธิเบศร์-บางใหญ่','Pleno','TH',4,421,0,19,19,5.43,1.36,0.45],
+    ['7046','Pleno รามอินทรา109 (ซ.พระยาสุเรนทร์11)','Pleno','TH',1,276,276,0,276,0,0,0],
+    ['7047','Pleno ราชพฤกษ์-แจ้งวัฒนะ','Pleno','TH',4,301,0,1,1,0.29,0.07,0.02],
+    ['7048','BKM พหลฯ-รามอินทรา','BKM','TH',4,272,0,7,7,2,0.5,0.17],
+    ['7053','BKM ราชพฤกษ์-สาทร','BKM','TH',3,364,46,52,98,14.86,3.71,1.24],
+    ['7059','Pleno ศรีนครินทร์ เทพารักษ์','Pleno','TH',4,299,0,1,1,0.29,0.07,0.02],
+    ['7061','Pleno ติวานนท์','Pleno','TH',3,499,1,81,82,23.14,5.79,1.93],
+    ['7065','Pleno สุขสวัสดิ์-ประชาอุทิศ','Pleno','TH',3,492,0,73,73,20.86,5.21,1.74],
+    ['7069','BKM รามอินทรา83 สเตชั่น','BKM','TH',3,458,62,123,185,35.14,8.79,2.93],
+    ['7080','Pleno เพชรเกษม-สาย4','Pleno','TH',4,227,0,1,1,0.29,0.07,0.02],
+    ['7081','Grande Pleno ศาลายา-บรมราชชนนี','Grande Pleno','TH',3,212,0,45,45,12.86,3.21,1.07],
+    ['7088','Pleno พหลโยธิน-สายไหม2','Pleno','TH',4,219,0,12,12,3.43,0.86,0.29],
+    ['7091','Grande Pleno เมกา บางนา','Grande Pleno','TH',4,180,0,17,17,4.86,1.21,0.40],
+    ['7095','Pleno Town พระราม2','Pleno','TH',3,403,2,143,145,40.86,10.21,3.40],
+    ['7096','BKM สาทร-เพชรเกษม','BKM','TH',3,208,0,92,92,26.29,6.57,2.19],
+    ['7100','Pleno สุขุมวิท-บางนา4 (เมกา ชิค)','Pleno','TH',3,130,23,63,86,18,4.5,1.5],
+    ['7104','Pleno บางใหญ่3','Pleno','TH',3,356,121,149,270,42.57,10.64,3.55],
+    ['7105','Pleno Town ลาดกระบัง-ฉลองกรุง','Pleno','TH',3,498,67,121,188,34.57,8.64,2.88],
+    ['7114','Grande Pleno พระราม9-มอเตอร์เวย์','Grande Pleno','TH',3,295,53,112,165,32,8,2.67],
+    ['7115','Pleno แฟชั่นฯ-รามอินทรา','Pleno','TH',3,238,0,81,81,23.14,5.79,1.93],
+    ['7117','Pleno Town พหลฯ-วิภาวดี','Pleno','TH',3,257,0,104,104,29.71,7.43,2.48],
+    ['7119','Grande Pleno พหลโยธิน-เพิ่มสิน28','Grande Pleno','TH',3,239,8,71,79,20.29,5.07,1.69],
+    ['7122','Pleno Town เพชรเกษม81','Pleno','TH',3,354,3,138,141,39.43,9.86,3.29],
+    ['7124','Pleno ปัญญา-รามอินทรา','Pleno','TH',3,203,0,62,62,17.71,4.43,1.48],
+    ['7125','BKM รามคำแหง174 สเตชั่น','BKM','TH',3,314,182,75,257,21.43,5.36,1.79],
+    ['7127','BKM The Edition โยธินพัฒนา','BKM The Edition','TH',4,46,0,13,13,3.71,0.93,0.31],
+    ['7130','Pleno สุขุมวิท-บางนา3','Pleno','TH',3,243,0,111,111,31.71,7.93,2.64],
+    ['7132','Grande Pleno รามอินทรา-วงแหวน2','Grande Pleno','TH',3,158,10,62,72,17.71,4.43,1.48],
+    ['7135','BKM The Edition บางนา2','BKM The Edition','TH',3,76,16,44,60,12.57,3.14,1.05],
+    ['7138','BKM ราชพฤกษ์-นครอินทร์','BKM','TH',3,274,185,68,253,19.43,4.86,1.62],
+    ['7139','Grande Pleno พหลโยธิน-วิภาวดี3','Grande Pleno','TH',4,8,0,1,1,0.29,0.07,0.02],
+    ['7140','Grande Pleno ศรีนครินทร์-เทพารักษ์','Grande Pleno','TH',2,242,204,38,242,10.86,2.71,0.90],
+    ['7143','Pleno พหลโยธิน-สายไหม57','Pleno','TH',2,340,221,119,340,34,8.5,2.83],
+    ['7145','Grande Pleno พหลโยธิน-ธูปะเตมีย์','Grande Pleno','TH',2,110,76,34,110,9.71,2.43,0.81],
+    ['7149','Pleno พระราม9-กรุงเทพกรีฑา4','Pleno','TH',2,156,89,67,156,19.14,4.79,1.60],
+    ['7153','Grande Pleno บางนา-กิ่งแก้ว','Grande Pleno','TH',2,98,86,12,98,3.43,0.86,0.29],
+    ['7154','Grande Pleno พระราม9-กรุงเทพกรีฑา','Grande Pleno','TH',2,4,0,4,4,1.14,0.29,0.10],
+    ['7156','Pleno ราชพฤกษ์-นครอินทร์','Pleno','TH',1,90,90,0,90,0,0,0],
+    ['7160','Pleno บางนา กม.5','Pleno','TH',1,192,192,0,192,0,0,0],
+    ['7164','District บางนา กม.5','District','TH',1,16,16,0,16,0,0,0],
+    ['7165','District บางนา กม.5 (อาคารพาณิชย์2)','District','TH',1,6,6,0,6,0,0,0],
+    ['WA02','Pleno บางใหญ่-กาญจนาฯ','Pleno','TH',3,216,0,99,99,28.29,7.07,2.36],
+    ['WA04','BKM The Edition พระราม9-พัฒนาการ2','BKM The Edition','TH',3,175,82,56,138,16,4,1.33],
+    ['WA05','BKM The Edition พหลโยธิน-วิภาวดี','BKM The Edition','TH',3,126,67,51,118,14.57,3.64,1.21],
+    ['WA08','Pleno Town ลาดกระบัง-ฉลองกรุง53','Pleno','TH',3,441,217,150,367,42.86,10.71,3.57],
+    ['WA09','Grande Pleno กรุงเทพกรีฑา','Grande Pleno','TH',3,184,84,84,168,24,6,2],
+    ['WA10','BKM The Edition เกษตร-นวมินทร์','BKM The Edition','TH',1,55,55,0,55,0,0,0],
+    ['WA11','Pleno พหลโยธิน-ลำลูกกา','Pleno','TH',1,225,225,0,225,0,0,0],
+    ['WA12','Pleno Town เทพารักษ์-บางพลี','Pleno','TH',1,484,484,0,484,0,0,0],
+    ['Y006','BKM The Classe สุขุมวิท77','BKM The Classe','TH',3,120,5,43,48,12.29,3.07,1.02],
+  ];
+  for (const r of rows) {
+    const brand = PRODUCT_TO_BRAND[r[2]] || 'pleno';
+    await addDoc(collection(db,'projects'), {
+      plantId:r[0], name:r[1], product:r[2], brand, bg:r[3],
+      segment:r[4], totalUnit:r[5], notStarted:r[6],
+      remaining2026:r[7], remainingInstall:r[8],
+      fcYear:r[9], fcQuarter:r[10], fcMonth:r[11],
+      driveLink:'', houseTypes:[], updatedAt:serverTimestamp()
+    });
+  }
+}
+
 function startListeners() {
+  onSnapshot(query(collection(db,'projects'), orderBy('plantId')), snap => {
+    projectsData = snap.docs.map(d => ({docId:d.id, ...d.data()}));
+    if (currentTab === 'projects') renderTab('projects');
+    if (currentTab === 'withdraw') renderTab('withdraw');
+    if (currentTab === 'pr') renderTab('pr');
+  });
   onSnapshot(collection(db, 'stock'), snap => {
     snap.forEach(d => { stockData[d.data().productId] = {docId:d.id, qty:d.data().qty}; });
     if (currentTab === 'inventory') renderTab('inventory');
@@ -599,7 +746,7 @@ document.addEventListener('click', e => {
 window.onSearch = function(q) {
   const dd = document.getElementById('wd-dropdown');
   if (!q) { dd?.classList.remove('open'); return; }
-  const res = ALL_PROJECTS.filter(p=>p.id.includes(q)||p.name.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  const res = getAllProjects().filter(p=>p.id.includes(q)||p.name.toLowerCase().includes(q.toLowerCase())).slice(0,8);
   if (!res.length) { dd?.classList.remove('open'); return; }
   dd.innerHTML = res.map(p=>`<div class="search-item" onclick="selectProject('${p.id}','${p.name}','${p.brand}')"><span class="search-item-id">${p.id}</span>${p.name}</div>`).join('');
   dd.classList.add('open');
@@ -669,7 +816,7 @@ function renderPRTab() {
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
         <div class="form-group" style="margin:0;"><div class="form-label">เลขที่ PR</div><input class="form-input" data-edit id="pr-num" placeholder="เช่น PR-2026-042"></div>
         <div class="form-group" style="margin:0;"><div class="form-label">โครงการ</div>
-          <select class="form-select" data-edit id="pr-project">${ALL_PROJECTS.map(p=>`<option value="${p.id}|${p.name}">${p.id} · ${p.name}</option>`).join('')}</select>
+          <select class="form-select" data-edit id="pr-project">${getAllProjects().map(p=>`<option value="${p.id}|${p.name}">${p.id} · ${p.name}</option>`).join('')}</select>
         </div>
         <div class="form-group" style="margin:0;"><div class="form-label">Vendor</div>
           <select class="form-select" data-edit id="pr-vendor"><option>CIT · 09-0640-7822</option><option>Poontana · 08-3514-4498</option><option>Karat</option></select>
@@ -742,22 +889,39 @@ function renderForecast() {
     </div>`;
 }
 
-const BRAND_DATA = {
-  pleno:{label:'Pleno / Pleno Town',badge:'b-pleno',lock:'Y02-Knob / Y02-Handle',projects:[['4137','Pleno สุขสวัสดิ์ฯ','3','226','226','56.5','14.1'],['4166','Pleno Town ลำลูกกาคลอง7','3','495','—','123.8','30.9'],['4072','Pleno Town บางนา','3','351','—','87.8','21.9'],['7061','Pleno ติวานนท์','3','499','—','124.8','31.2'],['4074','Pleno พหลโยธิน-ลำลูกกา','3','467','—','116.8','29.2']]},
-  grande:{label:'Grande Pleno',badge:'b-grande',lock:'J03 No-Camera / Aqara A100',projects:[['4092','Grande Pleno พหลฯ-วิภาวดี2','4','285','—','71.3','17.8'],['4102','Grande Pleno รามอินทรา-จตุโชติ','3','378','—','94.5','23.6'],['7030','Grande Pleno ราชพฤกษ์','3','373','—','93.3','23.3'],['7114','Grande Pleno พระราม9','3','295','—','73.8','18.4']]},
-  bkm:{label:'BKM',badge:'b-bkm',lock:'A2-Handle / A2-Knob / P60',projects:[['7053','BKM ราชพฤกษ์-สาทร','3','364','—','91','22.8'],['7069','BKM รามอินทรา83','3','458','—','114.5','28.6'],['4076','BKM วิภาวดี-แจ้งวัฒนะ','3','298','—','74.5','18.6']]},
-  bkme:{label:'BKM The Edition',badge:'b-bkme',lock:'J03 / Aqara A100',projects:[['4100','BKM The Edition ศรีนครินทร์','3','275','—','68.8','17.2'],['4164','BKM The Edition สาทร-กัลปพฤกษ์2','3','144','—','36','9'],['WA04','BKM The Edition พระราม9','3','175','—','43.8','10.9']]},
-  bkmc:{label:'BKM Classe',badge:'b-bkmc',lock:'J03 / Aqara A100',projects:[['4116','BKM Classe รัชโยธิน','3','62','—','15.5','3.9'],['4140','BKM Classe รัชดา','3','38','—','9.5','2.4']]},
-  api:{label:'Apitown',badge:'b-api',lock:'A2-Handle / P60 / Esther',projects:[['2029','Apitown เชียงราย','3','146','—','36.5','9.1'],['2031','Apitown อยุธยา','3','441','—','110.3','27.6'],['2047','Apitown ฉะเชิงเทรา','3','444','—','111','27.8']]},
-  dist:{label:'District',badge:'b-dist',lock:'Kudos J03 Pro',projects:[['2056','District พหลฯ-วิภาวดี','4','20','—','5','1.3'],['7164','District บางนา กม.5','1','16','—','4','1']]},
+// ── BRAND CONFIG (metadata only — project data comes from Firebase) ──
+const BRAND_CFG = {
+  pleno: {label:'Pleno / Pleno Town', badge:'b-pleno', lock:'Y02-Knob / Y02-Handle',   color:'#534AB7', bg:'#EEEDFE'},
+  grande:{label:'Grande Pleno',        badge:'b-grande', lock:'J03 No-Camera / Aqara A100', color:'#534AB7', bg:'#EEEDFE'},
+  bkm:   {label:'BKM',                 badge:'b-bkm',    lock:'A2-Handle / A2-Knob / P60',  color:'#0F6E56', bg:'#E1F5EE'},
+  bkme:  {label:'BKM The Edition',     badge:'b-bkme',   lock:'J03 / Aqara A100',            color:'#633806', bg:'#FAEEDA'},
+  bkmc:  {label:'BKM Classe',          badge:'b-bkmc',   lock:'J03 / Aqara A100',            color:'#712B13', bg:'#FAECE7'},
+  api:   {label:'Apitown',             badge:'b-api',    lock:'A2-Handle / P60 / Esther',    color:'#3B6D11', bg:'#EAF3DE'},
+  dist:  {label:'District',            badge:'b-dist',   lock:'Kudos J03 Pro',               color:'#444441', bg:'#F1EFE8'},
 };
 
+// map Excel "Product" string → brand key
+const PRODUCT_TO_BRAND = {
+  'Pleno':'pleno','Grande Pleno':'grande','BKM':'bkm',
+  'BKM The Edition':'bkme','BKM The Classe':'bkmc',
+  'Apitown':'api','District':'dist',
+};
+
+// runtime cache of projects loaded from Firebase
+let projectsData = [];
+
 window.renderProjects = function renderProjects() {
-  const rows = Object.entries(BRAND_DATA).map(([key,d])=>`
+  const brandSummary = {};
+  projectsData.forEach(p => {
+    if (!brandSummary[p.brand]) brandSummary[p.brand] = {count:0, units:0};
+    brandSummary[p.brand].count++;
+    brandSummary[p.brand].units += p.totalUnit||0;
+  });
+  const rows = Object.entries(BRAND_CFG).filter(([key])=>brandSummary[key]).map(([key,d])=>`
     <tr class="drill-row" onclick="showBrand('${key}')">
       <td><span class="badge ${d.badge}">${d.label}</span></td>
-      <td>${d.projects.length}</td>
-      <td>${d.projects.reduce((s,p)=>s+parseInt(p[3]||0),0).toLocaleString()}</td>
+      <td>${brandSummary[key]?.count||0}</td>
+      <td>${(brandSummary[key]?.units||0).toLocaleString()}</td>
       <td style="color:var(--purple);font-size:10px;">ดู →</td>
     </tr>`).join('');
   document.getElementById('main-content').innerHTML = `
@@ -771,16 +935,26 @@ window.renderProjects = function renderProjects() {
     <div id="proj-detail" style="display:none;flex-direction:column;gap:12px;"></div>`;
 }
 window.showBrand = function(key) {
-  const d = BRAND_DATA[key];
+  const cfg = BRAND_CFG[key];
+  const projs = projectsData.filter(p => p.brand === key);
   document.getElementById('brand-level').style.display = 'none';
   const det = document.getElementById('proj-detail');
   det.style.display = 'flex';
-  const projRows = d.projects.map(p=>`<tr><td style="font-size:10px;color:var(--text3);">${p[0]}</td><td><strong>${p[1]}</strong></td><td>${p[2]}</td><td>${p[3]}</td><td><input class="qty-input" data-edit placeholder="${p[4]}" style="width:60px;"></td><td>${p[5]}</td><td>${p[6]}</td><td><button class="save-btn" data-edit onclick="this.textContent='✓'">บันทึก</button></td></tr>`).join('');
+  const projRows = projs.map(p=>`<tr>
+    <td style="font-size:10px;color:var(--text3);">${p.plantId}</td>
+    <td><strong>${p.name}</strong></td>
+    <td>${p.segment||'—'}</td>
+    <td>${p.totalUnit||0}</td>
+    <td>${p.remainingInstall||0}</td>
+    <td>${p.fcYear||0}</td>
+    <td>${p.fcQuarter||0}</td>
+    <td><button class="save-btn" data-edit onclick="this.textContent='✓'">OK</button></td>
+  </tr>`).join('');
   det.innerHTML = `
     <button class="back-btn" onclick="window.renderProjects()"><i class="ti ti-arrow-left"></i> กลับ Brand level</button>
     <div class="card">
-      <div class="card-hd"><span class="badge ${d.badge}">${d.label}</span> · ${d.lock}</div>
-      <table><thead><tr><th>Plant</th><th>โครงการ</th><th>Seg</th><th>ยูนิต</th><th>คงเหลือ</th><th>FC/ปี</th><th>FC/Q</th><th>แก้ไข</th></tr></thead>
+      <div class="card-hd"><span class="badge ${cfg.badge}">${cfg.label}</span> · ${cfg.lock}</div>
+      <table><thead><tr><th>Plant</th><th>โครงการ</th><th>Seg</th><th>ยูนิต</th><th>เหลือติดตั้ง</th><th>FC/ปี</th><th>FC/Q</th><th></th></tr></thead>
       <tbody>${projRows}</tbody></table>
     </div>`;
   applyEditState();
@@ -1020,7 +1194,7 @@ function renderPRMobile() {
           <div><div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;">เลขที่ PR</div>
             <input class="form-input" data-edit id="pr-num" placeholder="เช่น PR-2026-042" style="height:36px;font-size:13px;"></div>
           <div><div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;">โครงการ</div>
-            <select class="form-select" data-edit id="pr-project" style="height:36px;font-size:13px;">${ALL_PROJECTS.map(p=>`<option value="${p.id}|${p.name}">${p.id} · ${p.name}</option>`).join('')}</select></div>
+            <select class="form-select" data-edit id="pr-project" style="height:36px;font-size:13px;">${getAllProjects().map(p=>`<option value="${p.id}|${p.name}">${p.id} · ${p.name}</option>`).join('')}</select></div>
           <div><div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;">Vendor</div>
             <select class="form-select" data-edit id="pr-vendor" style="height:36px;font-size:13px;"><option>CIT · 09-0640-7822</option><option>Poontana · 08-3514-4498</option><option>Karat</option></select></div>
         </div>
@@ -1036,32 +1210,27 @@ function renderPRMobile() {
 window.setPRFilterMb = function(s) { prFilter=s; renderPRMobile(); };
 
 window.renderProjectsMobile = function() {
-  const brandKeys=['all','pleno','grande','bkm','bkme','api','dist'];
-  const brandLabels=['ทั้งหมด','Pleno','Grande','BKM','BKM Edition','Apitown','District'];
+  const brandKeys=['all','pleno','grande','bkm','bkme','bkmc','api','dist'];
+  const brandLabels=['ทั้งหมด','Pleno','Grande','BKM','Edition','Classe','Apitown','District'];
   const chipBar=brandLabels.map((l,i)=>mbChip(l,i===0,`filterProjMobile(this,'${brandKeys[i]}')`)).join('');
-  const hd=mbHd('โครงการ','153 โครงการ · 7 Brands','',chipBar);
-
-  const allProjs=Object.entries(BRAND_DATA).flatMap(([key,d])=>
-    d.projects.map(p=>({key,d,p}))
-  );
-  const rows=allProjs.map(({key,d,p})=>{
-    const bmap={pleno:['#EEEDFE','#534AB7'],grande:['#EEEDFE','#534AB7'],bkm:['#E1F5EE','#0F6E56'],bkme:['#FAEEDA','#633806'],bkmc:['#FAECE7','#712B13'],api:['#EAF3DE','#3B6D11'],dist:['#F1EFE8','#444441']};
-    const [ibg,ic]=bmap[key]||bmap.pleno;
-    const pct=parseFloat(p[5]||0);
-    const progW=Math.round(pct/Math.max(...allProjs.map(x=>parseFloat(x.p[5]||0)))*100)+'%';
-    return {key, html:`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);">
-      <div style="width:34px;height:34px;border-radius:9px;background:${ibg};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-home" style="font-size:16px;color:${ic};" aria-hidden="true"></i></div>
-      <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${p[1]}</div>
-      <div style="font-size:11px;color:var(--text2);margin-top:1px;">${p[0]} · ${p[3]} ยูนิต · <span style="background:${ibg};color:${ic};font-size:10px;padding:1px 6px;border-radius:999px;">${d.label}</span></div>
-      <div style="height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:4px;"><div style="height:100%;width:${progW};background:${ic};border-radius:2px;"></div></div></div>
-      <div style="font-size:14px;font-weight:500;color:${ic};">${p[5]}</div>
+  const total = projectsData.length;
+  const hd=mbHd('โครงการ',`${total} โครงการ · 7 Brands`,'',chipBar);
+  const maxFc = Math.max(...projectsData.map(p=>p.fcYear||0), 1);
+  const rows = projectsData.map(p=>{
+    const cfg = BRAND_CFG[p.brand]||BRAND_CFG.pleno;
+    const progW = Math.round((p.fcYear||0)/maxFc*100)+'%';
+    return {brand:p.brand, html:`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);">
+      <div style="width:34px;height:34px;border-radius:9px;background:${cfg.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-home" style="font-size:16px;color:${cfg.color};" aria-hidden="true"></i></div>
+      <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${p.name}</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:1px;">${p.plantId} · ${p.totalUnit||0} ยูนิต · <span style="background:${cfg.bg};color:${cfg.color};font-size:10px;padding:1px 6px;border-radius:999px;">${cfg.label}</span></div>
+      <div style="height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:4px;"><div style="height:100%;width:${progW};background:${cfg.color};border-radius:2px;"></div></div></div>
+      <div style="font-size:14px;font-weight:500;color:${cfg.color};">${p.fcYear||0}</div>
     </div>`};
   });
-
   document.getElementById('main-content').innerHTML = `
     ${hd}
     <div style="padding:12px 14px;overflow-y:auto;flex:1;">
-      ${mbCard('',`<div id="proj-rows-mb">${rows.map(({key,html})=>`<div data-brand="${key}">${html}</div>`).join('')}</div>`)}
+      ${mbCard('',`<div id="proj-rows-mb">${rows.map(({brand,html})=>`<div data-brand="${brand}">${html}</div>`).join('')}</div>`)}
     </div>
     ${mbBn('projects')}`;
 };
@@ -1086,6 +1255,7 @@ window.addEventListener('resize', () => {
 
 async function main() {
   await initFirestore();
+  await seedProjects();
   startListeners();
   renderTab('overview');
 }
