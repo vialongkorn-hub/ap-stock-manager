@@ -1053,7 +1053,13 @@ window.showBrand = function(key) {
       <td>${driveBtn}</td>
       <td style="display:flex;gap:4px;">
         <button class="edit-btn" data-edit onclick="editProjectRow('${p.docId}','${key}')">แก้ไข</button>
+        <button class="edit-btn" data-edit onclick="toggleHTDesktop('${p.docId}','${key}')">Type</button>
         <button class="del-btn" data-edit onclick="deleteProject('${p.docId}','${key}')"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>
+    <tr id="ht-row-${p.docId}" style="display:none;">
+      <td colspan="11" style="padding:0;">
+        <div id="ht-inner-${p.docId}" style="padding:12px 16px;background:var(--bg3);border-top:1px solid var(--border);"></div>
       </td>
     </tr>`;
   }
@@ -1064,15 +1070,6 @@ window.showBrand = function(key) {
       <div class="card-hd"><span class="badge ${cfg.badge}">${cfg.label}</span> · ${cfg.lock}</div>
       <table><thead><tr><th>Plant</th><th>โครงการ</th><th>Seg</th><th>ยูนิต</th><th>ไม่ก่อสร้าง</th><th>เหลือติดตั้ง</th><th>FC/ปี</th><th>FC/Q</th><th>FC/เดือน</th><th>ผังรูป</th><th>แก้ไข</th></tr></thead>
       <tbody id="proj-tbody">${projs.map(p=>projRowHtml(p)).join('')}</tbody></table>
-    </div>
-    <div class="card">
-      <div class="card-hd"><i class="ti ti-home"></i> Type บ้าน</div>
-      <div style="position:relative;margin-bottom:12px;">
-        <i class="ti ti-search search-icon"></i>
-        <input class="search-input" id="ht-search" placeholder="พิมพ์รหัสหรือชื่อโครงการ เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onHTSearch(this.value,'${key}')" autocomplete="off">
-        <div class="search-dropdown" id="ht-dropdown"></div>
-      </div>
-      <div id="ht-content" style="color:var(--text3);font-size:12px;padding:8px 0;">← ค้นหาโครงการด้านบน</div>
     </div>`;
   applyEditState();
 };
@@ -1151,6 +1148,59 @@ function htLockOptions(brand) {
   const items = (BRAND_ITEMS[brand]||[]).map(pid=>PRODUCTS.find(p=>p.id===pid)).filter(Boolean);
   return items.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
 }
+
+window.toggleHTDesktop = function(docId, brandKey) {
+  const row = document.getElementById('ht-row-'+docId);
+  const inner = document.getElementById('ht-inner-'+docId);
+  if (!row || !inner) return;
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : '';
+  if (!isOpen) {
+    const p = projectsData.find(x=>x.docId===docId);
+    if (!p) return;
+    const types = p.houseTypes||[];
+    const rows = types.map((t,i)=>`
+      <span style="display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;margin:3px;">
+        <strong>${t.typeName}</strong> · ${t.units} ยูนิต · ${t.doorLock||'—'} ·
+        <span class="badge ${HT_STATUS_CLS[t.status]||'b-ok'}">${HT_STATUS[t.status]||t.status}</span>
+        <button class="del-btn" data-edit onclick="deleteHouseType('${docId}','${brandKey}',${i})" style="width:18px;height:18px;"><i class="ti ti-x" style="font-size:10px;"></i></button>
+      </span>`).join('') || '<span style="font-size:11px;color:var(--text3);">ยังไม่มี Type บ้าน</span>';
+    inner.innerHTML = `
+      <div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
+        <span style="font-size:11px;font-weight:600;color:var(--text2);margin-right:4px;"><i class="ti ti-home"></i> Type บ้าน:</span>
+        ${rows}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <input class="form-input" data-edit id="ht-name-${docId}" placeholder="ชื่อ Type เช่น A" style="height:26px;font-size:11px;width:120px;">
+        <input class="qty-input" data-edit id="ht-units-${docId}" type="number" placeholder="ยูนิต" style="width:64px;">
+        <select class="form-select" data-edit id="ht-lock-${docId}" style="height:26px;font-size:11px;width:140px;">${htLockOptions(p.brand)}</select>
+        <select class="form-select" data-edit id="ht-status-${docId}" style="height:26px;font-size:11px;width:120px;">
+          <option value="built">ก่อสร้างแล้ว</option>
+          <option value="waiting">รอก่อสร้าง</option>
+          <option value="pending">ยังไม่เริ่ม</option>
+        </select>
+        <button class="save-btn" data-edit onclick="addHouseTypeInline('${docId}','${brandKey}')"><i class="ti ti-plus"></i> เพิ่ม Type</button>
+      </div>`;
+    applyEditState();
+  }
+};
+
+window.addHouseTypeInline = async function(docId, brandKey) {
+  const p = projectsData.find(x=>x.docId===docId);
+  if (!p) return;
+  const typeName = document.getElementById('ht-name-'+docId)?.value.trim();
+  const units    = parseInt(document.getElementById('ht-units-'+docId)?.value)||0;
+  const doorLock = document.getElementById('ht-lock-'+docId)?.value||'';
+  const status   = document.getElementById('ht-status-'+docId)?.value||'built';
+  if (!typeName) { alert('กรุณากรอกชื่อ Type'); return; }
+  const types = [...(p.houseTypes||[]), {typeName, units, doorLock, status, note:''}];
+  await updateDoc(doc(db,'projects',docId), {houseTypes:types, updatedAt:serverTimestamp()});
+  const idx = projectsData.findIndex(x=>x.docId===docId);
+  if (idx>=0) projectsData[idx].houseTypes = types;
+  // re-open to refresh
+  document.getElementById('ht-row-'+docId).style.display = 'none';
+  toggleHTDesktop(docId, brandKey);
+};
 
 window.onHTSearch = function(q, brandKey) {
   const dd = document.getElementById('ht-dropdown');
