@@ -511,7 +511,7 @@ function startListeners() {
   });
   onSnapshot(query(collection(db, 'withdrawLog'), orderBy('createdAt','desc')), snap => {
     withdrawLog = snap.docs.map(d => ({docId:d.id, ...d.data()}));
-    if (currentTab === 'withdraw' && !selectedProject) renderTab('withdraw');
+    if (currentTab === 'withdraw') renderTab('withdraw');
     if (currentTab === 'overview') renderTab('overview');
   });
 }
