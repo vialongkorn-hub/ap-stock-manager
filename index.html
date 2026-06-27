@@ -765,9 +765,14 @@ function renderInventory() {
         <div class="form-group" style="margin:0;"><div class="form-label">Min Stock</div><input class="form-input" data-edit id="np-prod-min" type="number" placeholder="0"></div>
       </div>
       <div class="form-group" style="margin-bottom:10px;">
-        <div class="form-label">Brand ที่ใช้สินค้านี้ (เลือกได้หลาย Brand)</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
-          ${Object.entries(BRAND_CFG).map(([k,d])=>`<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" id="np-brand-${k}" value="${k}"> ${d.label}</label>`).join('')}
+        <div class="form-label">Brand ที่ใช้สินค้านี้</div>
+        <div id="np-brand-list" style="margin-top:6px;display:flex;flex-direction:column;gap:4px;"></div>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <select class="form-select" data-edit id="np-brand-add-select" style="height:28px;font-size:11px;width:160px;">
+            <option value="">เลือก Brand...</option>
+            ${Object.entries(BRAND_CFG).map(([k,d])=>`<option value="${k}">${d.label}</option>`).join('')}
+          </select>
+          <button class="edit-btn" data-edit onclick="addNpBrandRow()" style="display:flex;align-items:center;gap:2px;"><i class="ti ti-plus"></i> เพิ่ม</button>
         </div>
       </div>
       <button class="tb-btn primary" data-edit onclick="addProduct()"><i class="ti ti-plus"></i> เพิ่มสินค้า</button>
@@ -776,19 +781,39 @@ function renderInventory() {
   const card = document.getElementById('add-prod-card');
   if (card) { card.style.opacity = editMode?'1':'0.35'; card.style.pointerEvents = editMode?'':'none'; }
 }
+window.addNpBrandRow = function() {
+  const sel = document.getElementById('np-brand-add-select');
+  const k = sel?.value;
+  if (!k) return;
+  const list = document.getElementById('np-brand-list');
+  if (!list) return;
+  if (!list._brands) list._brands = [];
+  if (list._brands.includes(k)) return;
+  list._brands.push(k);
+  const bc = {pleno:'b-pleno',grande:'b-grande',bkm:'b-bkm',bkme:'b-bkme',bkmc:'b-bkmc',api:'b-api',dist:'b-dist'}[k]||'b-ok';
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 0;';
+  div.innerHTML = `<span class="badge ${bc}" style="font-size:11px;">${BRAND_CFG[k]?.label||k}</span>
+    <button class="del-btn" onclick="this.closest('div').remove();document.getElementById('np-brand-list')._brands=document.getElementById('np-brand-list')._brands.filter(b=>b!=='${k}');document.getElementById('np-brand-add-select').add(new Option('${BRAND_CFG[k]?.label||k}','${k}'))" style="width:18px;height:18px;"><i class="ti ti-x" style="font-size:9px;"></i></button>`;
+  list.appendChild(div);
+  sel.querySelector(`option[value="${k}"]`)?.remove();
+  sel.value = '';
+};
+
 window.addProduct = async function() {
   const id    = document.getElementById('np-prod-id')?.value.trim().toUpperCase();
   const code  = document.getElementById('np-prod-code')?.value.trim();
   const name  = document.getElementById('np-prod-name')?.value.trim();
   const price = parseInt(document.getElementById('np-prod-price')?.value)||0;
   const min   = parseInt(document.getElementById('np-prod-min')?.value)||0;
-  const brands = Object.keys(BRAND_CFG).filter(k=>document.getElementById('np-brand-'+k)?.checked);
+  const list  = document.getElementById('np-brand-list');
+  const brands = list?._brands || [];
   if (!id || !name) { alert('กรุณากรอก ID และชื่อสินค้า'); return; }
   if (productsData.find(p=>p.id===id)) { alert('ID นี้มีอยู่แล้ว'); return; }
   await addDoc(collection(db,'products'), {id, code:code||`DDL-${id}`, name, vendor:'CIT', brand:brands[0]||'pleno', brands, price, min, updatedAt:serverTimestamp()});
   await addDoc(collection(db,'stock'), {productId:id, qty:0, updatedAt:serverTimestamp()});
   ['np-prod-id','np-prod-code','np-prod-name','np-prod-price','np-prod-min'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
-  Object.keys(BRAND_CFG).forEach(k=>{const el=document.getElementById('np-brand-'+k);if(el)el.checked=false;});
+  if (list) { list.innerHTML=''; list._brands=[]; }
 };
 
 window.editProductRow = function(id) {
@@ -796,15 +821,30 @@ window.editProductRow = function(id) {
   if (!p) return;
   const row = document.getElementById('inv-row-'+id);
   if (!row) return;
-  const brandsCheck = Object.entries(BRAND_CFG).map(([k,d])=>
-    `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;white-space:nowrap;">
-      <input type="checkbox" id="ep-brand-${id}-${k}" value="${k}" ${(p.brands||[]).includes(k)?'checked':''}> ${d.label}
-    </label>`).join('');
+  const currentBrands = p.brands||[];
+  const brandBadge = (k) => {
+    const cfg = BRAND_CFG[k];
+    const badgeCls = {pleno:'b-pleno',grande:'b-grande',bkm:'b-bkm',bkme:'b-bkme',bkmc:'b-bkmc',api:'b-api',dist:'b-dist'}[k]||'b-ok';
+    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:0.5px solid var(--border);" id="brand-row-${id}-${k}">
+      <span class="badge ${badgeCls}" style="font-size:11px;">${cfg?.label||k}</span>
+      <button class="del-btn" onclick="removeBrandRow('${id}','${k}')" style="width:20px;height:20px;"><i class="ti ti-x" style="font-size:10px;"></i></button>
+    </div>`;
+  };
+  const availBrands = Object.keys(BRAND_CFG).filter(k=>!currentBrands.includes(k));
   row.innerHTML = `
-    <td><input class="qty-input" id="ep-code-${id}" value="${p.code}" style="width:80px;font-size:11px;"></td>
-    <td><input class="form-input" id="ep-name-${id}" value="${p.name}" style="height:26px;font-size:11px;min-width:140px;"></td>
+    <td style="font-size:10px;color:var(--text3);">${p.code}</td>
+    <td><strong>${p.name}</strong></td>
     <td style="font-size:10px;">CIT</td>
-    <td><div style="display:flex;gap:6px;flex-wrap:wrap;">${brandsCheck}</div></td>
+    <td>
+      <div id="brand-list-${id}">${currentBrands.map(k=>brandBadge(k)).join('')}</div>
+      <div style="display:flex;gap:4px;align-items:center;margin-top:6px;">
+        <select class="form-select" id="brand-add-select-${id}" style="height:26px;font-size:11px;width:140px;">
+          <option value="">เลือก Brand...</option>
+          ${availBrands.map(k=>`<option value="${k}">${BRAND_CFG[k]?.label||k}</option>`).join('')}
+        </select>
+        <button class="edit-btn" onclick="addBrandRow('${id}')" style="display:flex;align-items:center;gap:2px;"><i class="ti ti-plus"></i> เพิ่ม</button>
+      </div>
+    </td>
     <td><input class="qty-input" id="ep-price-${id}" type="number" value="${p.price||0}" style="width:70px;"></td>
     <td id="inv-qty-${id}">${stockData[id]?.qty??0}</td>
     <td><input class="qty-input" id="ep-min-${id}" type="number" value="${p.min||0}" style="width:50px;"></td>
@@ -813,18 +853,52 @@ window.editProductRow = function(id) {
       <button class="save-btn" onclick="saveProduct('${id}')">บันทึก</button>
       <button class="edit-btn" onclick="renderInventory()">ยกเลิก</button>
     </td>`;
+  // store current brands in a temp array on the element
+  document.getElementById('brand-list-'+id)._brands = [...currentBrands];
+};
+
+window.addBrandRow = function(id) {
+  const sel = document.getElementById('brand-add-select-'+id);
+  const k = sel?.value;
+  if (!k) return;
+  const list = document.getElementById('brand-list-'+id);
+  if (!list || list._brands.includes(k)) return;
+  list._brands.push(k);
+  const cfg = BRAND_CFG[k];
+  const badgeCls = {pleno:'b-pleno',grande:'b-grande',bkm:'b-bkm',bkme:'b-bkme',bkmc:'b-bkmc',api:'b-api',dist:'b-dist'}[k]||'b-ok';
+  const div = document.createElement('div');
+  div.id = `brand-row-${id}-${k}`;
+  div.style.cssText = 'display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:0.5px solid var(--border);';
+  div.innerHTML = `<span class="badge ${badgeCls}" style="font-size:11px;">${cfg?.label||k}</span>
+    <button class="del-btn" onclick="removeBrandRow('${id}','${k}')" style="width:20px;height:20px;"><i class="ti ti-x" style="font-size:10px;"></i></button>`;
+  list.appendChild(div);
+  // remove from dropdown
+  sel.querySelector(`option[value="${k}"]`)?.remove();
+  sel.value = '';
+};
+
+window.removeBrandRow = function(id, k) {
+  const list = document.getElementById('brand-list-'+id);
+  if (!list) return;
+  list._brands = list._brands.filter(b=>b!==k);
+  document.getElementById(`brand-row-${id}-${k}`)?.remove();
+  // add back to dropdown
+  const sel = document.getElementById('brand-add-select-'+id);
+  if (sel) {
+    const opt = document.createElement('option');
+    opt.value = k; opt.textContent = BRAND_CFG[k]?.label||k;
+    sel.appendChild(opt);
+  }
 };
 
 window.saveProduct = async function(id) {
   const p = productsData.find(x=>x.id===id);
   if (!p || !p.docId) return;
-  const code   = document.getElementById('ep-code-'+id)?.value.trim();
-  const name   = document.getElementById('ep-name-'+id)?.value.trim();
+  const list = document.getElementById('brand-list-'+id);
+  const brands = list?._brands || [];
   const price  = parseInt(document.getElementById('ep-price-'+id)?.value)||0;
   const min    = parseInt(document.getElementById('ep-min-'+id)?.value)||0;
-  const brands = Object.keys(BRAND_CFG).filter(k=>document.getElementById(`ep-brand-${id}-${k}`)?.checked);
-  if (!name) { alert('กรุณากรอกชื่อสินค้า'); return; }
-  await updateDoc(doc(db,'products',p.docId), {code, name, price, min, brands, brand:brands[0]||p.brand, updatedAt:serverTimestamp()});
+  await updateDoc(doc(db,'products',p.docId), {price, min, brands, brand:brands[0]||p.brand, updatedAt:serverTimestamp()});
 };
 
 window.deleteProduct = async function(id) {
@@ -1808,8 +1882,13 @@ function renderInventoryMobile() {
               <input class="form-input" data-edit id="mb-np-prod-min" type="number" placeholder="0" style="height:34px;font-size:12px;"></div>
           </div>
           <div><div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Brand ที่ใช้สินค้านี้</div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;">
-              ${Object.entries(BRAND_CFG).map(([k,d])=>`<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" id="mb-np-brand-${k}" value="${k}"> ${d.label}</label>`).join('')}
+            <div id="mb-np-brand-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px;"></div>
+            <div style="display:flex;gap:6px;">
+              <select class="form-select" data-edit id="mb-np-brand-add-select" style="flex:1;height:32px;font-size:12px;">
+                <option value="">เลือก Brand...</option>
+                ${Object.entries(BRAND_CFG).map(([k,d])=>`<option value="${k}">${d.label}</option>`).join('')}
+              </select>
+              <button class="edit-btn" data-edit onclick="mbAddNpBrandRow()" style="height:32px;font-size:11px;white-space:nowrap;"><i class="ti ti-plus"></i> เพิ่ม</button>
             </div>
           </div>
           <button class="tb-btn primary" data-edit style="width:100%;justify-content:center;height:38px;font-size:13px;" onclick="mbAddProduct()">
@@ -1827,10 +1906,14 @@ window.mbEditProduct = function(id) {
   if (!p) return;
   const cell = document.getElementById('mb-inv-'+id);
   if (!cell) return;
-  const brandsCheck = Object.entries(BRAND_CFG).map(([k,d])=>
-    `<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">
-      <input type="checkbox" id="mb-ep-brand-${id}-${k}" value="${k}" ${(p.brands||[]).includes(k)?'checked':''}> ${d.label}
-    </label>`).join('');
+  const currentBrands = p.brands||[];
+  const badgeCls = (k) => ({pleno:'b-pleno',grande:'b-grande',bkm:'b-bkm',bkme:'b-bkme',bkmc:'b-bkmc',api:'b-api',dist:'b-dist'}[k]||'b-ok');
+  const brandRows = currentBrands.map(k=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;border:0.5px solid var(--border);margin-bottom:4px;" id="mb-brand-row-${id}-${k}">
+      <span class="badge ${badgeCls(k)}">${BRAND_CFG[k]?.label||k}</span>
+      <button class="del-btn" onclick="mbRemoveBrandRow('${id}','${k}')" style="width:22px;height:22px;"><i class="ti ti-x" style="font-size:11px;"></i></button>
+    </div>`).join('');
+  const availBrands = Object.keys(BRAND_CFG).filter(k=>!currentBrands.includes(k));
   cell.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
       <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">ชื่อสินค้า</div>
@@ -1841,14 +1924,50 @@ window.mbEditProduct = function(id) {
         <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">Min Stock</div>
           <input class="form-input" id="mb-ep-min-${id}" type="number" value="${p.min||0}" style="height:32px;font-size:12px;"></div>
       </div>
-      <div><div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Brand ที่ใช้สินค้านี้</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;">${brandsCheck}</div>
+      <div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:6px;">Brand ที่ใช้สินค้านี้</div>
+        <div id="mb-brand-list-${id}">${brandRows}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+          <select class="form-select" id="mb-brand-add-select-${id}" style="flex:1;height:32px;font-size:12px;">
+            <option value="">เลือก Brand...</option>
+            ${availBrands.map(k=>`<option value="${k}">${BRAND_CFG[k]?.label||k}</option>`).join('')}
+          </select>
+          <button class="edit-btn" onclick="mbAddBrandRow('${id}')" style="white-space:nowrap;height:32px;font-size:11px;"><i class="ti ti-plus"></i> เพิ่ม</button>
+        </div>
       </div>
       <div style="display:flex;gap:6px;">
         <button class="save-btn" style="flex:1;height:32px;font-size:12px;" onclick="mbSaveProduct('${id}')">บันทึก</button>
         <button class="edit-btn" style="flex:1;height:32px;font-size:12px;" onclick="renderInventoryMobile()">ยกเลิก</button>
       </div>
     </div>`;
+  document.getElementById('mb-brand-list-'+id)._brands = [...currentBrands];
+};
+
+window.mbAddBrandRow = function(id) {
+  const sel = document.getElementById('mb-brand-add-select-'+id);
+  const k = sel?.value;
+  if (!k) return;
+  const list = document.getElementById('mb-brand-list-'+id);
+  if (!list || list._brands.includes(k)) return;
+  list._brands.push(k);
+  const bc = {pleno:'b-pleno',grande:'b-grande',bkm:'b-bkm',bkme:'b-bkme',bkmc:'b-bkmc',api:'b-api',dist:'b-dist'}[k]||'b-ok';
+  const div = document.createElement('div');
+  div.id = `mb-brand-row-${id}-${k}`;
+  div.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;border:0.5px solid var(--border);margin-bottom:4px;';
+  div.innerHTML = `<span class="badge ${bc}">${BRAND_CFG[k]?.label||k}</span>
+    <button class="del-btn" onclick="mbRemoveBrandRow('${id}','${k}')" style="width:22px;height:22px;"><i class="ti ti-x" style="font-size:11px;"></i></button>`;
+  list.appendChild(div);
+  sel.querySelector(`option[value="${k}"]`)?.remove();
+  sel.value = '';
+};
+
+window.mbRemoveBrandRow = function(id, k) {
+  const list = document.getElementById('mb-brand-list-'+id);
+  if (!list) return;
+  list._brands = list._brands.filter(b=>b!==k);
+  document.getElementById(`mb-brand-row-${id}-${k}`)?.remove();
+  const sel = document.getElementById('mb-brand-add-select-'+id);
+  if (sel) { const opt = document.createElement('option'); opt.value=k; opt.textContent=BRAND_CFG[k]?.label||k; sel.appendChild(opt); }
 };
 
 window.mbSaveProduct = async function(id) {
@@ -1857,9 +1976,29 @@ window.mbSaveProduct = async function(id) {
   const name   = document.getElementById('mb-ep-name-'+id)?.value.trim();
   const price  = parseInt(document.getElementById('mb-ep-price-'+id)?.value)||0;
   const min    = parseInt(document.getElementById('mb-ep-min-'+id)?.value)||0;
-  const brands = Object.keys(BRAND_CFG).filter(k=>document.getElementById(`mb-ep-brand-${id}-${k}`)?.checked);
+  const list   = document.getElementById('mb-brand-list-'+id);
+  const brands = list?._brands || [];
   if (!name) { alert('กรุณากรอกชื่อสินค้า'); return; }
   await updateDoc(doc(db,'products',p.docId), {name, price, min, brands, brand:brands[0]||p.brand, updatedAt:serverTimestamp()});
+};
+
+window.mbAddNpBrandRow = function() {
+  const sel = document.getElementById('mb-np-brand-add-select');
+  const k = sel?.value;
+  if (!k) return;
+  const list = document.getElementById('mb-np-brand-list');
+  if (!list) return;
+  if (!list._brands) list._brands = [];
+  if (list._brands.includes(k)) return;
+  list._brands.push(k);
+  const bc = {pleno:'b-pleno',grande:'b-grande',bkm:'b-bkm',bkme:'b-bkme',bkmc:'b-bkmc',api:'b-api',dist:'b-dist'}[k]||'b-ok';
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:8px;border:0.5px solid var(--border);margin-bottom:4px;';
+  div.innerHTML = `<span class="badge ${bc}">${BRAND_CFG[k]?.label||k}</span>
+    <button class="del-btn" onclick="this.closest('div').remove();document.getElementById('mb-np-brand-list')._brands=document.getElementById('mb-np-brand-list')._brands.filter(b=>b!=='${k}');document.getElementById('mb-np-brand-add-select').add(new Option('${BRAND_CFG[k]?.label||k}','${k}'))" style="width:22px;height:22px;"><i class="ti ti-x" style="font-size:11px;"></i></button>`;
+  list.appendChild(div);
+  sel.querySelector(`option[value="${k}"]`)?.remove();
+  sel.value = '';
 };
 
 window.mbAddProduct = async function() {
@@ -1868,13 +2007,14 @@ window.mbAddProduct = async function() {
   const name  = document.getElementById('mb-np-prod-name')?.value.trim();
   const price = parseInt(document.getElementById('mb-np-prod-price')?.value)||0;
   const min   = parseInt(document.getElementById('mb-np-prod-min')?.value)||0;
-  const brands = Object.keys(BRAND_CFG).filter(k=>document.getElementById('mb-np-brand-'+k)?.checked);
+  const list  = document.getElementById('mb-np-brand-list');
+  const brands = list?._brands || [];
   if (!id || !name) { alert('กรุณากรอก ID และชื่อสินค้า'); return; }
   if (productsData.find(p=>p.id===id)) { alert('ID นี้มีอยู่แล้ว'); return; }
   await addDoc(collection(db,'products'), {id, code:code||`DDL-${id}`, name, vendor:'CIT', brand:brands[0]||'pleno', brands, price, min, updatedAt:serverTimestamp()});
   await addDoc(collection(db,'stock'), {productId:id, qty:0, updatedAt:serverTimestamp()});
   ['mb-np-prod-id','mb-np-prod-code','mb-np-prod-name','mb-np-prod-price','mb-np-prod-min'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
-  Object.keys(BRAND_CFG).forEach(k=>{const el=document.getElementById('mb-np-brand-'+k);if(el)el.checked=false;});
+  if (list) { list.innerHTML=''; list._brands=[]; }
 };
 
 window.mbTapQty = function(productId, docId, currentQty) {
