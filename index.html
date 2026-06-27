@@ -866,7 +866,7 @@ function renderPRTab() {
     const nxt = NEXT_STATUS[p.status];
     const linesHtml = (p.lines||[]).map(l=>`<div style="font-size:10px;color:var(--text2);">${l.product} · <strong>${l.qty}</strong> ชิ้น</div>`).join('');
     const btnHtml = nxt?`<button class="edit-btn" data-edit onclick="updatePR('${p.docId}','${nxt}')">${nxt==='wait'?'→ รอของเข้า':'→ เข้าคลัง'}</button>`:`<span style="font-size:10px;color:var(--text3);">✓</span>`;
-    return `<tr><td style="font-size:10px;font-weight:600;color:var(--purple);">${p.prNum||'—'}</td><td style="font-size:11px;">${p.project||'—'}</td><td>${linesHtml}</td><td style="font-size:10px;">${p.vendor||'—'}</td><td style="font-size:10px;">${fmtDate(p.createdAt)}</td><td><span class="badge ${s.cls}">${s.txt}</span></td><td>${btnHtml}</td></tr>`;
+    return `<tr><td style="font-size:10px;font-weight:600;color:var(--purple);">${p.prNum||'—'}</td><td style="font-size:11px;">${p.project||'—'}</td><td>${linesHtml}</td><td style="font-size:10px;">${p.vendor||'—'}</td><td style="font-size:10px;">${fmtDate(p.createdAt)}</td><td><span class="badge ${s.cls}">${s.txt}</span></td><td style="display:flex;gap:4px;">${btnHtml}<button class="del-btn" data-edit onclick="deletePR('${p.docId}','${p.status}')"><i class="ti ti-trash"></i></button></td></tr>`;
   }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px;">ไม่มีรายการ</td></tr>';
   document.getElementById('main-content').innerHTML = `
     <div class="card" id="pr-new-card">
@@ -917,6 +917,57 @@ window.submitPR = async function() {
   const projVal = document.getElementById('pr-project')?.value.split('|');
   await addDoc(collection(db,'pr'),{prNum:num,project:projVal?.[1]||'',projectId:projVal?.[0]||'',vendor:document.getElementById('pr-vendor')?.value.split(' ·')[0]||'',lines,status:'open',createdAt:serverTimestamp()});
 };
+window.deletePR = async function(docId, status) {
+  const pr = prList.find(p => p.docId === docId);
+  if (!pr) return;
+
+  // สร้าง dialog ถาม
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  const isDone = status === 'done';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border-radius:16px;padding:24px 28px;width:320px;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px;">ลบ PR ${pr.prNum||''}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:18px;">เลือกวิธีการลบ PR นี้</div>
+      ${isDone ? `
+      <button id="del-pr-stock" style="width:100%;height:40px;border-radius:9px;border:1px solid var(--red);background:var(--red-light);color:var(--red);font-size:13px;cursor:pointer;margin-bottom:8px;font-family:var(--font);">
+        🗑 ลบ PR + หักสต็อกคืน
+      </button>` : ''}
+      <button id="del-pr-only" style="width:100%;height:40px;border-radius:9px;border:1px solid var(--border2);background:none;color:var(--text);font-size:13px;cursor:pointer;margin-bottom:8px;font-family:var(--font);">
+        ลบ PR อย่างเดียว
+      </button>
+      <button id="del-pr-cancel" style="width:100%;height:40px;border-radius:9px;border:none;background:var(--bg3);color:var(--text2);font-size:13px;cursor:pointer;font-family:var(--font);">
+        ยกเลิก
+      </button>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#del-pr-cancel').onclick = () => overlay.remove();
+
+  overlay.querySelector('#del-pr-only').onclick = async () => {
+    overlay.remove();
+    await deleteDoc(doc(db,'pr',docId));
+  };
+
+  if (isDone) {
+    overlay.querySelector('#del-pr-stock').onclick = async () => {
+      overlay.remove();
+      // หักสต็อกคืน
+      const prSnap = await getDoc(doc(db,'pr',docId));
+      const lines = prSnap.data()?.lines || [];
+      for (const l of lines) {
+        const sid = STOCK_MAP[l.product];
+        if (sid && stockData[sid]?.docId) {
+          const newQty = Math.max(0, (stockData[sid]?.qty||0) - (parseInt(l.qty)||0));
+          await updateDoc(doc(db,'stock',stockData[sid].docId),{qty:newQty,updatedAt:serverTimestamp()});
+          stockData[sid].qty = newQty;
+        }
+      }
+      await deleteDoc(doc(db,'pr',docId));
+    };
+  }
+};
+
 window.updatePR = async function(docId, newStatus) {
   await updateDoc(doc(db,'pr',docId),{status:newStatus});
   if (newStatus==='done') {
@@ -1682,7 +1733,8 @@ function renderPRMobile() {
       <div style="font-size:11px;color:var(--text2);margin-top:2px;">${p.project||'—'} · ${p.vendor||'—'}</div>
       <div style="margin-top:3px;">${linesHtml}</div></div>
       <div style="text-align:right;flex-shrink:0;">${mbBadge(s.txt,s.cls.replace('b-pr-',''))}
-      <div style="font-size:10px;color:var(--text3);margin-top:2px;">${fmtDate(p.createdAt)}</div>${btnHtml}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px;">${fmtDate(p.createdAt)}</div>
+      <div style="display:flex;gap:4px;justify-content:flex-end;margin-top:4px;">${btnHtml}<button class="del-btn" data-edit onclick="deletePR('${p.docId}','${p.status}')"><i class="ti ti-trash" style="font-size:12px;"></i></button></div></div>
     </div>`;
   }).join('')||`<div style="font-size:12px;color:var(--text3);padding:14px 0;text-align:center;">ไม่มีรายการ</div>`;
 
