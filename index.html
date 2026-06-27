@@ -299,7 +299,13 @@ const PRODUCTS = [
   {id:'EST',code:'DDL-EST',name:'Esther EAE-08',vendor:'CIT',brand:'api',price:8900,min:10},
 ];
 
-const BRAND_ITEMS = {
+// BRAND_ITEMS ดึงจาก productsData.brands[] แทน hardcode
+function getBrandItems(brand) {
+  return productsData.filter(p => (p.brands||[]).includes(brand)).map(p => p.id);
+}
+
+// fallback hardcode สำหรับตอนที่ productsData ยังไม่ sync
+const BRAND_ITEMS_DEFAULT = {
   pleno:['Y02K','Y02H'], grande:['J03','A100'], bkm:['A2H','A2K','P60'],
   bkme:['J03','A100'], bkmc:['J03','A100'], api:['A2H','EST'], dist:['J03P'],
 };
@@ -496,8 +502,12 @@ let productsData = [...PRODUCTS]; // เริ่มจาก hardcode ก่อ
 async function seedProducts() {
   const snap = await getDocs(collection(db, 'products'));
   if (!snap.empty) return;
+  const brandMap = {
+    Y02K:['pleno'], Y02H:['pleno'], J03:['grande','bkme','bkmc'], J03P:['dist'],
+    P60:['bkm'], A2H:['bkm','api'], A2K:['bkm'], A100:['grande','bkme','bkmc'], EST:['api']
+  };
   for (const p of PRODUCTS) {
-    await addDoc(collection(db,'products'), {...p, updatedAt:serverTimestamp()});
+    await addDoc(collection(db,'products'), {...p, brands: brandMap[p.id]||[], updatedAt:serverTimestamp()});
   }
 }
 
@@ -754,6 +764,12 @@ function renderInventory() {
         <div class="form-group" style="margin:0;"><div class="form-label">ราคา (ex VAT)</div><input class="form-input" data-edit id="np-prod-price" type="number" placeholder="0"></div>
         <div class="form-group" style="margin:0;"><div class="form-label">Min Stock</div><input class="form-input" data-edit id="np-prod-min" type="number" placeholder="0"></div>
       </div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <div class="form-label">Brand ที่ใช้สินค้านี้ (เลือกได้หลาย Brand)</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
+          ${Object.entries(BRAND_CFG).map(([k,d])=>`<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" id="np-brand-${k}" value="${k}"> ${d.label}</label>`).join('')}
+        </div>
+      </div>
       <button class="tb-btn primary" data-edit onclick="addProduct()"><i class="ti ti-plus"></i> เพิ่มสินค้า</button>
     </div>`;
   applyEditState();
@@ -766,12 +782,13 @@ window.addProduct = async function() {
   const name  = document.getElementById('np-prod-name')?.value.trim();
   const price = parseInt(document.getElementById('np-prod-price')?.value)||0;
   const min   = parseInt(document.getElementById('np-prod-min')?.value)||0;
+  const brands = Object.keys(BRAND_CFG).filter(k=>document.getElementById('np-brand-'+k)?.checked);
   if (!id || !name) { alert('กรุณากรอก ID และชื่อสินค้า'); return; }
   if (productsData.find(p=>p.id===id)) { alert('ID นี้มีอยู่แล้ว'); return; }
-  await addDoc(collection(db,'products'), {id, code:`DDL-${id}`, name, vendor:'CIT', brand:'pleno', price, min, updatedAt:serverTimestamp()});
-  // seed stock = 0
+  await addDoc(collection(db,'products'), {id, code:code||`DDL-${id}`, name, vendor:'CIT', brand:brands[0]||'pleno', brands, price, min, updatedAt:serverTimestamp()});
   await addDoc(collection(db,'stock'), {productId:id, qty:0, updatedAt:serverTimestamp()});
   ['np-prod-id','np-prod-code','np-prod-name','np-prod-price','np-prod-min'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+  Object.keys(BRAND_CFG).forEach(k=>{const el=document.getElementById('np-brand-'+k);if(el)el.checked=false;});
 };
 
 window.editProductRow = function(id) {
@@ -779,11 +796,15 @@ window.editProductRow = function(id) {
   if (!p) return;
   const row = document.getElementById('inv-row-'+id);
   if (!row) return;
+  const brandsCheck = Object.entries(BRAND_CFG).map(([k,d])=>
+    `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;white-space:nowrap;">
+      <input type="checkbox" id="ep-brand-${id}-${k}" value="${k}" ${(p.brands||[]).includes(k)?'checked':''}> ${d.label}
+    </label>`).join('');
   row.innerHTML = `
     <td><input class="qty-input" id="ep-code-${id}" value="${p.code}" style="width:80px;font-size:11px;"></td>
     <td><input class="form-input" id="ep-name-${id}" value="${p.name}" style="height:26px;font-size:11px;min-width:140px;"></td>
     <td style="font-size:10px;">CIT</td>
-    <td style="font-size:10px;color:var(--text3);">${p.brand}</td>
+    <td><div style="display:flex;gap:6px;flex-wrap:wrap;">${brandsCheck}</div></td>
     <td><input class="qty-input" id="ep-price-${id}" type="number" value="${p.price||0}" style="width:70px;"></td>
     <td id="inv-qty-${id}">${stockData[id]?.qty??0}</td>
     <td><input class="qty-input" id="ep-min-${id}" type="number" value="${p.min||0}" style="width:50px;"></td>
@@ -797,12 +818,13 @@ window.editProductRow = function(id) {
 window.saveProduct = async function(id) {
   const p = productsData.find(x=>x.id===id);
   if (!p || !p.docId) return;
-  const code  = document.getElementById('ep-code-'+id)?.value.trim();
-  const name  = document.getElementById('ep-name-'+id)?.value.trim();
-  const price = parseInt(document.getElementById('ep-price-'+id)?.value)||0;
-  const min   = parseInt(document.getElementById('ep-min-'+id)?.value)||0;
+  const code   = document.getElementById('ep-code-'+id)?.value.trim();
+  const name   = document.getElementById('ep-name-'+id)?.value.trim();
+  const price  = parseInt(document.getElementById('ep-price-'+id)?.value)||0;
+  const min    = parseInt(document.getElementById('ep-min-'+id)?.value)||0;
+  const brands = Object.keys(BRAND_CFG).filter(k=>document.getElementById(`ep-brand-${id}-${k}`)?.checked);
   if (!name) { alert('กรุณากรอกชื่อสินค้า'); return; }
-  await updateDoc(doc(db,'products',p.docId), {code, name, price, min, updatedAt:serverTimestamp()});
+  await updateDoc(doc(db,'products',p.docId), {code, name, price, min, brands, brand:brands[0]||p.brand, updatedAt:serverTimestamp()});
 };
 
 window.deleteProduct = async function(id) {
@@ -905,7 +927,7 @@ window.selectProject = function(id, name, brand) {
   if (searchEl) searchEl.value = `${id} · ${name}`;
   document.getElementById('wd-dropdown').classList.remove('open');
   document.getElementById('wd-selected').textContent = `Brand: ${brand.toUpperCase()} · map สินค้าอัตโนมัติ`;
-  const items = (BRAND_ITEMS[brand]||[]).map(pid=>PRODUCTS.find(p=>p.id===pid)).filter(Boolean);
+  const items = (getBrandItems(brand).length>0?getBrandItems(brand):(BRAND_ITEMS_DEFAULT[brand]||[])).map(pid=>productsData.find(p=>p.id===pid)).filter(Boolean);
   document.getElementById('wd-item-list').innerHTML = items.map(it=>`
     <div class="withdraw-item">
       <div style="flex:1;"><div style="font-size:12px;font-weight:600;">${it.name}</div>
@@ -918,7 +940,7 @@ window.selectProject = function(id, name, brand) {
 };
 window.confirmWithdraw = async function() {
   if (!selectedProject) return;
-  const items = (BRAND_ITEMS[selectedProject.brand]||[]).map(pid=>PRODUCTS.find(p=>p.id===pid)).filter(Boolean);
+  const items = (getBrandItems(selectedProject.brand).length>0?getBrandItems(selectedProject.brand):(BRAND_ITEMS_DEFAULT[selectedProject.brand]||[])).map(pid=>productsData.find(p=>p.id===pid)).filter(Boolean);
   let ok = false;
   for (const it of items) {
     const q = parseInt(document.getElementById('wd-'+it.id)?.value)||0;
@@ -1422,7 +1444,7 @@ const HT_STATUS = {built:'ก่อสร้างแล้ว', waiting:'รอ
 const HT_STATUS_CLS = {built:'b-ok', waiting:'b-low', pending:'b-crit'};
 
 function htLockOptions(brand) {
-  const items = (BRAND_ITEMS[brand]||[]).map(pid=>PRODUCTS.find(p=>p.id===pid)).filter(Boolean);
+  const items = (getBrandItems(brand).length>0?getBrandItems(brand):(BRAND_ITEMS_DEFAULT[brand]||[])).map(pid=>productsData.find(p=>p.id===pid)).filter(Boolean);
   return items.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
 }
 
@@ -1785,6 +1807,11 @@ function renderInventoryMobile() {
             <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">Min Stock</div>
               <input class="form-input" data-edit id="mb-np-prod-min" type="number" placeholder="0" style="height:34px;font-size:12px;"></div>
           </div>
+          <div><div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Brand ที่ใช้สินค้านี้</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              ${Object.entries(BRAND_CFG).map(([k,d])=>`<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" id="mb-np-brand-${k}" value="${k}"> ${d.label}</label>`).join('')}
+            </div>
+          </div>
           <button class="tb-btn primary" data-edit style="width:100%;justify-content:center;height:38px;font-size:13px;" onclick="mbAddProduct()">
             <i class="ti ti-plus"></i> เพิ่มสินค้า
           </button>
@@ -1800,8 +1827,10 @@ window.mbEditProduct = function(id) {
   if (!p) return;
   const cell = document.getElementById('mb-inv-'+id);
   if (!cell) return;
-  const qty = stockData[id]?.qty??0;
-  const s = getStatus(id);
+  const brandsCheck = Object.entries(BRAND_CFG).map(([k,d])=>
+    `<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">
+      <input type="checkbox" id="mb-ep-brand-${id}-${k}" value="${k}" ${(p.brands||[]).includes(k)?'checked':''}> ${d.label}
+    </label>`).join('');
   cell.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
       <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">ชื่อสินค้า</div>
@@ -1811,6 +1840,9 @@ window.mbEditProduct = function(id) {
           <input class="form-input" id="mb-ep-price-${id}" type="number" value="${p.price||0}" style="height:32px;font-size:12px;"></div>
         <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px;">Min Stock</div>
           <input class="form-input" id="mb-ep-min-${id}" type="number" value="${p.min||0}" style="height:32px;font-size:12px;"></div>
+      </div>
+      <div><div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Brand ที่ใช้สินค้านี้</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">${brandsCheck}</div>
       </div>
       <div style="display:flex;gap:6px;">
         <button class="save-btn" style="flex:1;height:32px;font-size:12px;" onclick="mbSaveProduct('${id}')">บันทึก</button>
@@ -1822,11 +1854,12 @@ window.mbEditProduct = function(id) {
 window.mbSaveProduct = async function(id) {
   const p = productsData.find(x=>x.id===id);
   if (!p || !p.docId) return;
-  const name  = document.getElementById('mb-ep-name-'+id)?.value.trim();
-  const price = parseInt(document.getElementById('mb-ep-price-'+id)?.value)||0;
-  const min   = parseInt(document.getElementById('mb-ep-min-'+id)?.value)||0;
+  const name   = document.getElementById('mb-ep-name-'+id)?.value.trim();
+  const price  = parseInt(document.getElementById('mb-ep-price-'+id)?.value)||0;
+  const min    = parseInt(document.getElementById('mb-ep-min-'+id)?.value)||0;
+  const brands = Object.keys(BRAND_CFG).filter(k=>document.getElementById(`mb-ep-brand-${id}-${k}`)?.checked);
   if (!name) { alert('กรุณากรอกชื่อสินค้า'); return; }
-  await updateDoc(doc(db,'products',p.docId), {name, price, min, updatedAt:serverTimestamp()});
+  await updateDoc(doc(db,'products',p.docId), {name, price, min, brands, brand:brands[0]||p.brand, updatedAt:serverTimestamp()});
 };
 
 window.mbAddProduct = async function() {
@@ -1835,11 +1868,13 @@ window.mbAddProduct = async function() {
   const name  = document.getElementById('mb-np-prod-name')?.value.trim();
   const price = parseInt(document.getElementById('mb-np-prod-price')?.value)||0;
   const min   = parseInt(document.getElementById('mb-np-prod-min')?.value)||0;
+  const brands = Object.keys(BRAND_CFG).filter(k=>document.getElementById('mb-np-brand-'+k)?.checked);
   if (!id || !name) { alert('กรุณากรอก ID และชื่อสินค้า'); return; }
   if (productsData.find(p=>p.id===id)) { alert('ID นี้มีอยู่แล้ว'); return; }
-  await addDoc(collection(db,'products'), {id, code:code||`DDL-${id}`, name, vendor:'CIT', brand:'pleno', price, min, updatedAt:serverTimestamp()});
+  await addDoc(collection(db,'products'), {id, code:code||`DDL-${id}`, name, vendor:'CIT', brand:brands[0]||'pleno', brands, price, min, updatedAt:serverTimestamp()});
   await addDoc(collection(db,'stock'), {productId:id, qty:0, updatedAt:serverTimestamp()});
   ['mb-np-prod-id','mb-np-prod-code','mb-np-prod-name','mb-np-prod-price','mb-np-prod-min'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+  Object.keys(BRAND_CFG).forEach(k=>{const el=document.getElementById('mb-np-brand-'+k);if(el)el.checked=false;});
 };
 
 window.mbTapQty = function(productId, docId, currentQty) {
