@@ -1717,7 +1717,7 @@ function renderWithdrawMobile() {
       <div><div style="font-size:13px;font-weight:500;">${l.project||'—'}</div><div style="font-size:11px;color:var(--text2);">${fmtDate(l.createdAt)}</div></div>
       <div style="display:flex;align-items:center;gap:8px;">
         <div style="text-align:right;"><div style="font-size:13px;font-weight:500;">${l.product||'—'}</div><div style="font-size:11px;color:var(--text2);">${l.qty||0} ชิ้น</div></div>
-        <button onclick="if(!editMode){alert('กรุณา unlock ก่อน');return;}deleteWithdrawLog('${l.docId}','${l.productId||''}',${l.qty||0})"
+        <button class="del-btn" data-edit onclick="deleteWithdrawLog('${l.docId}','${l.productId||''}',${l.qty||0})"
           style="width:28px;height:28px;border-radius:6px;border:0.5px solid var(--border2);background:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
           <i class="ti ti-trash" style="font-size:13px;color:var(--text2);" aria-hidden="true"></i>
         </button>
@@ -1759,6 +1759,7 @@ function renderWithdrawMobile() {
       `)}
     </div>
     ${mbBn('withdraw')}`;
+  setTimeout(applyEditState, 0);
 }
 window.filterLogMb = function(btn,brand) {
   btn.closest('div').querySelectorAll('button[onclick*="filterLogMb"]').forEach(c=>{c.style.cssText=`font-size:11px;padding:4px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;cursor:pointer;${MB_CHIP}`;});
@@ -1781,7 +1782,7 @@ function renderPRMobile() {
       <div style="font-size:10px;color:var(--text3);margin-top:2px;">${fmtDate(p.createdAt)}</div>
       <div style="display:flex;gap:4px;justify-content:flex-end;margin-top:4px;">
         ${btnHtml}
-        <button onclick="if(!editMode){alert('กรุณา unlock ก่อน');return;}deletePR('${p.docId}','${p.status}')"
+        <button class="del-btn" data-edit onclick="deletePR('${p.docId}','${p.status}')"
           style="width:28px;height:28px;border-radius:6px;border:0.5px solid var(--border2);background:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
           <i class="ti ti-trash" style="font-size:13px;color:var(--text2);" aria-hidden="true"></i>
         </button>
@@ -1814,6 +1815,7 @@ function renderPRMobile() {
     </div>
     ${mbBn('pr')}`;
   addPRLine();
+  setTimeout(applyEditState, 0);
 }
 window.setPRFilterMb = function(s) { prFilter=s; renderPRMobile(); };
 
