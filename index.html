@@ -774,12 +774,15 @@ function renderWithdraw() {
         <div id="wd-items" style="display:none;">
           <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">สินค้าตาม Brand — map อัตโนมัติ</div>
           <div id="wd-item-list"></div>
-          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <div style="margin-top:10px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
             <div style="display:flex;flex-direction:column;gap:3px;">
               <div style="font-size:11px;color:var(--text2);">วันที่ติดตั้ง</div>
               <input class="form-input" id="wd-install-date" type="date" style="width:140px;">
             </div>
-            <input class="form-input" id="wd-note" placeholder="หมายเหตุ (ถ้ามี)" style="flex:1;">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <div style="font-size:11px;color:var(--text2);">หมายเหตุ</div>
+              <input class="form-input" id="wd-note" placeholder="หมายเหตุ (ถ้ามี)">
+            </div>
             <button class="tb-btn primary" data-edit onclick="confirmWithdraw()"><i class="ti ti-check"></i> ยืนยันเบิก</button>
           </div>
         </div>
