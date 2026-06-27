@@ -878,7 +878,7 @@ function renderPRTab() {
           <select class="form-select" data-edit id="pr-project">${getAllProjects().map(p=>`<option value="${p.id}|${p.name}">${p.id} · ${p.name}</option>`).join('')}</select>
         </div>
         <div class="form-group" style="margin:0;"><div class="form-label">Vendor</div>
-          <select class="form-select" data-edit id="pr-vendor"><option>CIT · 09-0640-7822</option><option>Poontana · 08-3514-4498</option><option>Karat</option></select>
+          <span class="form-input" style="display:flex;align-items:center;height:32px;font-size:12px;color:var(--text2);">CIT</span>
         </div>
       </div>
       <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;">รายการสินค้าใน PR นี้</div>
@@ -916,7 +916,7 @@ window.submitPR = async function() {
   lineEls.forEach(el=>{const sel=el.querySelector('select');const inp=el.querySelector('input');const q=parseInt(inp?.value)||0;if(q>0)lines.push({product:sel.value,qty:q});});
   if (!lines.length) { alert('กรุณากรอกจำนวนสินค้า'); return; }
   const projVal = document.getElementById('pr-project')?.value.split('|');
-  await addDoc(collection(db,'pr'),{prNum:num,project:projVal?.[1]||'',projectId:projVal?.[0]||'',vendor:document.getElementById('pr-vendor')?.value.split(' ·')[0]||'',lines,status:'open',createdAt:serverTimestamp()});
+  await addDoc(collection(db,'pr'),{prNum:num,project:projVal?.[1]||'',projectId:projVal?.[0]||'',vendor:'CIT',lines,status:'open',createdAt:serverTimestamp()});
 };
 window.deleteWithdrawLog = async function(docId, productId, qty) {
   const overlay = document.createElement('div');
@@ -1805,7 +1805,7 @@ function renderPRMobile() {
           <div><div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;">โครงการ</div>
             <select class="form-select" data-edit id="pr-project" style="height:36px;font-size:13px;">${getAllProjects().map(p=>`<option value="${p.id}|${p.name}">${p.id} · ${p.name}</option>`).join('')}</select></div>
           <div><div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;">Vendor</div>
-            <select class="form-select" data-edit id="pr-vendor" style="height:36px;font-size:13px;"><option>CIT · 09-0640-7822</option><option>Poontana · 08-3514-4498</option><option>Karat</option></select></div>
+            <span style="display:flex;align-items:center;height:36px;font-size:13px;color:var(--text2);">CIT</span></div>
         </div>
         <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;">รายการสินค้า</div>
         <div id="pr-lines"></div>
