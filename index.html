@@ -752,11 +752,12 @@ function renderWithdraw() {
   const logRows = withdrawLog.map(l=>`
     <tr data-brand="${l.brand||''}">
       <td style="font-size:10px;">${fmtDate(l.createdAt)}</td>
+      <td style="font-size:10px;">${l.installDate||'—'}</td>
       <td style="font-size:10px;">${l.project||'—'}</td>
       <td style="font-size:10px;">${l.product||'—'}</td>
       <td>${l.qty||0}</td>
       <td><button class="del-btn" data-edit onclick="deleteWithdrawLog('${l.docId}','${l.productId||''}',${l.qty||0})"><i class="ti ti-trash"></i></button></td>
-    </tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:16px;">ยังไม่มีการเบิก</td></tr>';
+    </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:16px;">ยังไม่มีการเบิก</td></tr>';
   document.getElementById('main-content').innerHTML = `
     <div class="two-col">
       <div class="card">
@@ -773,7 +774,11 @@ function renderWithdraw() {
         <div id="wd-items" style="display:none;">
           <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">สินค้าตาม Brand — map อัตโนมัติ</div>
           <div id="wd-item-list"></div>
-          <div style="margin-top:10px;display:flex;gap:8px;">
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <div style="font-size:11px;color:var(--text2);">วันที่ติดตั้ง</div>
+              <input class="form-input" id="wd-install-date" type="date" style="width:140px;">
+            </div>
             <input class="form-input" id="wd-note" placeholder="หมายเหตุ (ถ้ามี)" style="flex:1;">
             <button class="tb-btn primary" data-edit onclick="confirmWithdraw()"><i class="ti ti-check"></i> ยืนยันเบิก</button>
           </div>
@@ -791,7 +796,7 @@ function renderWithdraw() {
           <button class="chip" onclick="filterLog(this,'bkm')">BKM</button>
           <button class="chip" onclick="filterLog(this,'api')">Apitown</button>
         </div>
-        <table><thead><tr><th>วันที่</th><th>โครงการ</th><th>สินค้า</th><th>จำนวน</th><th></th></tr></thead>
+        <table><thead><tr><th>วันที่เบิก</th><th>วันที่ติดตั้ง</th><th>โครงการ</th><th>สินค้า</th><th>จำนวน</th><th></th></tr></thead>
         <tbody id="log-body">${logRows}</tbody></table>
       </div>
     </div>`;
@@ -842,6 +847,7 @@ window.confirmWithdraw = async function() {
         project:selectedProject.name, projectId:selectedProject.id,
         product:it.name, productId:it.id, qty:q,
         brand:selectedProject.brand, note:document.getElementById('wd-note')?.value||'',
+        installDate:document.getElementById('wd-install-date')?.value||'',
         createdAt:serverTimestamp()
       });
     }
@@ -1714,7 +1720,8 @@ window.filterInvMobile = function(btn,v) {
 function renderWithdrawMobile() {
   const logRows = withdrawLog.map(l=>`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--border);" data-brand="${l.brand||''}">
-      <div><div style="font-size:13px;font-weight:500;">${l.project||'—'}</div><div style="font-size:11px;color:var(--text2);">${fmtDate(l.createdAt)}</div></div>
+      <div><div style="font-size:13px;font-weight:500;">${l.project||'—'}</div>
+        <div style="font-size:11px;color:var(--text2);">เบิก: ${fmtDate(l.createdAt)}${l.installDate?` · ติดตั้ง: ${l.installDate}`:''}</div></div>
       <div style="display:flex;align-items:center;gap:8px;">
         <div style="text-align:right;"><div style="font-size:13px;font-weight:500;">${l.product||'—'}</div><div style="font-size:11px;color:var(--text2);">${l.qty||0} ชิ้น</div></div>
         <button class="del-btn" data-edit onclick="deleteWithdrawLog('${l.docId}','${l.productId||''}',${l.qty||0})"
@@ -1739,9 +1746,15 @@ function renderWithdrawMobile() {
         <div id="wd-items" style="display:none;">
           <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px;padding-bottom:6px;border-bottom:0.5px solid var(--border);">สินค้า — map อัตโนมัติ</div>
           <div id="wd-item-list"></div>
-          <div style="margin-top:10px;display:flex;gap:8px;">
-            <input class="form-input" id="wd-note" placeholder="หมายเหตุ" style="flex:1;height:36px;font-size:13px;">
-            <button class="tb-btn primary" data-edit onclick="confirmWithdraw()" style="white-space:nowrap;height:36px;font-size:13px;"><i class="ti ti-check" aria-hidden="true"></i> ยืนยัน</button>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+            <div>
+              <div style="font-size:12px;color:var(--text2);margin-bottom:4px;">วันที่ติดตั้ง</div>
+              <input class="form-input" id="wd-install-date" type="date" style="width:100%;height:36px;font-size:13px;">
+            </div>
+            <div style="display:flex;gap:8px;">
+              <input class="form-input" id="wd-note" placeholder="หมายเหตุ" style="flex:1;height:36px;font-size:13px;">
+              <button class="tb-btn primary" data-edit onclick="confirmWithdraw()" style="white-space:nowrap;height:36px;font-size:13px;"><i class="ti ti-check" aria-hidden="true"></i> ยืนยัน</button>
+            </div>
           </div>
         </div>
         <div id="wd-placeholder" style="font-size:12px;color:var(--text3);padding:16px 0;text-align:center;">
