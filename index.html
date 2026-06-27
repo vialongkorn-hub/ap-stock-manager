@@ -490,7 +490,24 @@ async function seedProjects() {
   }
 }
 
+// Runtime products cache (synced from Firebase)
+let productsData = [...PRODUCTS]; // เริ่มจาก hardcode ก่อน Firebase sync
+
+async function seedProducts() {
+  const snap = await getDocs(collection(db, 'products'));
+  if (!snap.empty) return;
+  for (const p of PRODUCTS) {
+    await addDoc(collection(db,'products'), {...p, updatedAt:serverTimestamp()});
+  }
+}
+
 function startListeners() {
+  onSnapshot(collection(db,'products'), snap => {
+    if (!snap.empty) {
+      productsData = snap.docs.map(d => ({docId:d.id, ...d.data()}));
+    }
+    if (currentTab === 'inventory') renderTab('inventory');
+  });
   onSnapshot(query(collection(db,'projects'), orderBy('plantId')), snap => {
     projectsData = snap.docs.map(d => ({docId:d.id, ...d.data()}));
     if (currentTab === 'projects') renderTab('projects');
@@ -556,7 +573,7 @@ function renderTab(id) {
 
 function getStatus(id) {
   const qty = stockData[id]?.qty ?? 0;
-  const p = PRODUCTS.find(x => x.id === id);
+  const p = productsData.find(x => x.id === id) || PRODUCTS.find(x => x.id === id);
   const min = p?.min ?? 0;
   if (qty >= min) return {cls:'b-ok',txt:'OK'};
   if (qty >= min * 0.6) return {cls:'b-low',txt:'ต่ำ'};
@@ -702,38 +719,102 @@ function renderOverview() {
 window.switchPeriod = function(p) { currentPeriod = p; renderTab('overview'); };
 
 function renderInventory() {
-  const rows = PRODUCTS.map(p => {
+  const rows = productsData.map(p => {
     const qty = stockData[p.id]?.qty ?? '...';
     const s = getStatus(p.id);
     const brandCls = {pleno:'b-pleno',grande:'b-grande',bkm:'b-bkm',bkme:'b-bkme',bkmc:'b-bkmc',api:'b-api',dist:'b-dist'}[p.brand]||'b-ok';
-    return `<tr data-v="${p.vendor==='CIT'?'cit':'other'}">
+    return `<tr id="inv-row-${p.id}" data-v="cit">
       <td style="font-size:10px;color:var(--text3);">${p.code}</td>
       <td><strong>${p.name}</strong></td>
-      <td style="font-size:10px;">${p.vendor}</td>
+      <td style="font-size:10px;">CIT</td>
       <td><span class="badge ${brandCls}">${p.brand}</span></td>
-      <td>${p.price?p.price.toLocaleString():'—'}</td>
+      <td id="inv-price-${p.id}">${p.price?p.price.toLocaleString():'—'}</td>
       <td id="inv-qty-${p.id}">${qty}</td>
       <td>${p.min}</td>
       <td><span class="badge ${s.cls}" id="inv-st-${p.id}">${s.txt}</span></td>
-      <td><button class="edit-btn" data-edit id="inv-btn-${p.id}" onclick="editStock('${p.id}')">แก้ไข</button></td>
+      <td style="display:flex;gap:4px;">
+        <button class="edit-btn" data-edit id="inv-btn-${p.id}" onclick="editStock('${p.id}')">แก้ไข</button>
+        <button class="edit-btn" data-edit onclick="editProductRow('${p.id}')">สินค้า</button>
+        <button class="del-btn" data-edit onclick="deleteProduct('${p.id}')"><i class="ti ti-trash"></i></button>
+      </td>
     </tr>`;
   }).join('');
   document.getElementById('main-content').innerHTML = `
-    <div class="chip-row">
-      <button class="chip active" onclick="filterInv(this,'all')">ทั้งหมด</button>
-      <button class="chip" onclick="filterInv(this,'cit')">Kudos by CIT</button>
-    </div>
     <div class="card">
-      <div class="card-hd"><i class="ti ti-packages"></i> สินค้าคงคลัง — แก้ไขได้โดยตรง</div>
-      <table><thead><tr><th>รหัส</th><th>สินค้า</th><th>Vendor</th><th>Brand</th><th>ราคา</th><th>คงเหลือ</th><th>Min</th><th>สถานะ</th><th>แก้ไข</th></tr></thead>
+      <div class="card-hd"><i class="ti ti-packages"></i> สินค้าคงคลัง</div>
+      <table><thead><tr><th>รหัส</th><th>สินค้า</th><th>Vendor</th><th>Brand</th><th>ราคา</th><th>คงเหลือ</th><th>Min</th><th>สถานะ</th><th></th></tr></thead>
       <tbody id="inv-body">${rows}</tbody></table>
+    </div>
+    <div class="card edit-only" id="add-prod-card" style="opacity:0.35;pointer-events:none;">
+      <div class="card-hd"><i class="ti ti-plus" style="color:var(--purple);"></i> เพิ่มสินค้าใหม่</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;">
+        <div class="form-group" style="margin:0;"><div class="form-label">รหัส ID</div><input class="form-input" data-edit id="np-prod-id" placeholder="เช่น Y03K"></div>
+        <div class="form-group" style="margin:0;"><div class="form-label">รหัสสินค้า</div><input class="form-input" data-edit id="np-prod-code" placeholder="เช่น DDL-Y03K"></div>
+        <div class="form-group" style="margin:0;"><div class="form-label">ชื่อสินค้า</div><input class="form-input" data-edit id="np-prod-name" placeholder="ชื่อสินค้า"></div>
+        <div class="form-group" style="margin:0;"><div class="form-label">ราคา (ex VAT)</div><input class="form-input" data-edit id="np-prod-price" type="number" placeholder="0"></div>
+        <div class="form-group" style="margin:0;"><div class="form-label">Min Stock</div><input class="form-input" data-edit id="np-prod-min" type="number" placeholder="0"></div>
+      </div>
+      <button class="tb-btn primary" data-edit onclick="addProduct()"><i class="ti ti-plus"></i> เพิ่มสินค้า</button>
     </div>`;
+  applyEditState();
+  const card = document.getElementById('add-prod-card');
+  if (card) { card.style.opacity = editMode?'1':'0.35'; card.style.pointerEvents = editMode?'':'none'; }
 }
-window.filterInv = function(btn, v) {
-  btn.closest('.chip-row').querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('#inv-body tr').forEach(tr=>{tr.style.display=(v==='all'||tr.dataset.v===v)?'':'none';});
+window.addProduct = async function() {
+  const id    = document.getElementById('np-prod-id')?.value.trim().toUpperCase();
+  const code  = document.getElementById('np-prod-code')?.value.trim();
+  const name  = document.getElementById('np-prod-name')?.value.trim();
+  const price = parseInt(document.getElementById('np-prod-price')?.value)||0;
+  const min   = parseInt(document.getElementById('np-prod-min')?.value)||0;
+  if (!id || !name) { alert('กรุณากรอก ID และชื่อสินค้า'); return; }
+  if (productsData.find(p=>p.id===id)) { alert('ID นี้มีอยู่แล้ว'); return; }
+  await addDoc(collection(db,'products'), {id, code:`DDL-${id}`, name, vendor:'CIT', brand:'pleno', price, min, updatedAt:serverTimestamp()});
+  // seed stock = 0
+  await addDoc(collection(db,'stock'), {productId:id, qty:0, updatedAt:serverTimestamp()});
+  ['np-prod-id','np-prod-code','np-prod-name','np-prod-price','np-prod-min'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
 };
+
+window.editProductRow = function(id) {
+  const p = productsData.find(x=>x.id===id);
+  if (!p) return;
+  const row = document.getElementById('inv-row-'+id);
+  if (!row) return;
+  row.innerHTML = `
+    <td><input class="qty-input" id="ep-code-${id}" value="${p.code}" style="width:80px;font-size:11px;"></td>
+    <td><input class="form-input" id="ep-name-${id}" value="${p.name}" style="height:26px;font-size:11px;min-width:140px;"></td>
+    <td style="font-size:10px;">CIT</td>
+    <td style="font-size:10px;color:var(--text3);">${p.brand}</td>
+    <td><input class="qty-input" id="ep-price-${id}" type="number" value="${p.price||0}" style="width:70px;"></td>
+    <td id="inv-qty-${id}">${stockData[id]?.qty??0}</td>
+    <td><input class="qty-input" id="ep-min-${id}" type="number" value="${p.min||0}" style="width:50px;"></td>
+    <td></td>
+    <td style="display:flex;gap:4px;">
+      <button class="save-btn" onclick="saveProduct('${id}')">บันทึก</button>
+      <button class="edit-btn" onclick="renderInventory()">ยกเลิก</button>
+    </td>`;
+};
+
+window.saveProduct = async function(id) {
+  const p = productsData.find(x=>x.id===id);
+  if (!p || !p.docId) return;
+  const code  = document.getElementById('ep-code-'+id)?.value.trim();
+  const name  = document.getElementById('ep-name-'+id)?.value.trim();
+  const price = parseInt(document.getElementById('ep-price-'+id)?.value)||0;
+  const min   = parseInt(document.getElementById('ep-min-'+id)?.value)||0;
+  if (!name) { alert('กรุณากรอกชื่อสินค้า'); return; }
+  await updateDoc(doc(db,'products',p.docId), {code, name, price, min, updatedAt:serverTimestamp()});
+};
+
+window.deleteProduct = async function(id) {
+  const p = productsData.find(x=>x.id===id);
+  if (!p || !p.docId) return;
+  if (!confirm(`ลบ "${p.name}" ออกจากระบบ? ไม่สามารถกู้คืนได้`)) return;
+  await deleteDoc(doc(db,'products',p.docId));
+  // ลบ stock doc ด้วย
+  if (stockData[id]?.docId) await deleteDoc(doc(db,'stock',stockData[id].docId));
+};
+
+window.addProduct = window.addProduct;
 window.editStock = async function(id) {
   const btn = document.getElementById('inv-btn-'+id);
   const cell = document.getElementById('inv-qty-'+id);
@@ -2107,6 +2188,7 @@ window.addEventListener('resize', () => {
 async function main() {
   await initFirestore();
   await seedProjects();
+  await seedProducts();
   startListeners();
   renderTab('overview');
 }
