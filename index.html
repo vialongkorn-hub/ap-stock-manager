@@ -176,6 +176,7 @@ tr:hover td{background:var(--bg3);}
     <div style="font-size:15px;font-weight:600;margin-bottom:4px;">โหมดแก้ไข</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:18px;">กรอก PIN เพื่อ unlock</div>
     <input id="pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="••••••"
+      autocomplete="new-password"
       style="width:100%;height:44px;border:1.5px solid var(--border2);border-radius:10px;padding:0 14px;font-size:20px;text-align:center;letter-spacing:6px;font-family:var(--font);background:var(--bg);color:var(--text);outline:none;"
       onkeydown="if(event.key==='Enter')confirmPIN()">
     <div id="pin-error" style="font-size:11px;color:var(--red);margin-top:8px;min-height:16px;"></div>
@@ -763,7 +764,7 @@ function renderWithdraw() {
           <div class="form-label">ค้นหาโครงการ (พิมพ์รหัส หรือชื่อ)</div>
           <div class="search-wrap">
             <i class="ti ti-search search-icon"></i>
-            <input class="search-input" data-edit id="wd-search" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off">
+            <input class="search-input" data-edit id="wd-search" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off" autocomplete="off">
             <div class="search-dropdown" id="wd-dropdown"></div>
           </div>
           <div id="wd-selected" style="font-size:11px;color:var(--purple);margin-top:4px;min-height:16px;"></div>
@@ -1152,7 +1153,7 @@ window.showBrand = function(key) {
       </div>
       <div class="search-wrap" style="margin-bottom:10px;">
         <i class="ti ti-search search-icon"></i>
-        <input class="search-input" id="brand-search" placeholder="ค้นหารหัสหรือชื่อโครงการ..." oninput="filterBrandProjs(this.value,'${key}')">
+        <input class="search-input" id="brand-search" autocomplete="off" placeholder="ค้นหารหัสหรือชื่อโครงการ..." autocomplete="off" oninput="filterBrandProjs(this.value,'${key}')">
       </div>
       <table><thead><tr><th>Plant</th><th>โครงการ</th><th>Seg</th><th>ยูนิต</th><th>ไม่ก่อสร้าง</th><th>เหลือติดตั้ง</th><th>FC/ปี</th><th>FC/Q</th><th>FC/เดือน</th><th>ผังรูป</th><th>แก้ไข</th></tr></thead>
       <tbody id="proj-tbody">${projs.map(p=>projRowHtml(p)).join('')}</tbody></table>
@@ -1633,7 +1634,7 @@ function renderWithdrawMobile() {
       ${mbCard('',`
         <div style="position:relative;margin-bottom:10px;">
           <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);" aria-hidden="true"></i>
-          <input class="search-input" data-edit id="wd-search-mb" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off" style="padding-left:34px;height:36px;font-size:13px;">
+          <input class="search-input" data-edit id="wd-search-mb" placeholder="เช่น 4137 หรือ Pleno สุขสวัสดิ์..." oninput="onSearch(this.value)" autocomplete="off" autocomplete="off" style="padding-left:34px;height:36px;font-size:13px;">
           <div class="search-dropdown" id="wd-dropdown"></div>
         </div>
         <div id="wd-selected" style="font-size:12px;color:#534AB7;margin-bottom:6px;min-height:16px;"></div>
@@ -1861,7 +1862,7 @@ window.showBrandMobile = function(brandKey) {
         <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);" aria-hidden="true"></i>
         <input style="width:100%;height:36px;border:1px solid var(--border2);border-radius:8px;padding:0 10px 0 34px;font-size:13px;background:var(--bg2);color:var(--text);font-family:var(--font);"
           placeholder="ค้นหารหัสหรือชื่อโครงการ..."
-          oninput="filterMbBrandProjs(this.value,'${brandKey}',renderMbRows_${brandKey.replace(/[^a-z]/g,'')})">
+          autocomplete="off" oninput="filterMbBrandProjs(this.value,'${brandKey}',renderMbRows_${brandKey.replace(/[^a-z]/g,'')})">
       </div>
       ${mbCard('',`<div id="mb-brand-proj-rows">${renderMbProjRows(projs)}</div>`)}
     </div>
