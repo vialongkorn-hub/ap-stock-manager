@@ -189,7 +189,7 @@ tr:hover td{background:var(--bg3);}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB8s2Bs7NyQx1gm72faKajBABDFblOWfFM",
@@ -921,15 +921,17 @@ window.updatePR = async function(docId, newStatus) {
   await updateDoc(doc(db,'pr',docId),{status:newStatus});
   if (newStatus==='done') {
     try {
-      const pr = prList.find(p => p.docId === docId);
-      const lines = pr?.lines || [];
+      const prSnap = await getDoc(doc(db,'pr',docId));
+      const lines = prSnap.data()?.lines || [];
       for (const l of lines) {
         const sid = STOCK_MAP[l.product];
         if (sid && stockData[sid]?.docId) {
-          await updateDoc(doc(db,'stock',stockData[sid].docId),{qty:(stockData[sid]?.qty||0)+l.qty,updatedAt:serverTimestamp()});
+          const newQty = (stockData[sid]?.qty||0) + (parseInt(l.qty)||0);
+          await updateDoc(doc(db,'stock',stockData[sid].docId),{qty:newQty,updatedAt:serverTimestamp()});
+          stockData[sid].qty = newQty;
         }
       }
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error('updatePR stock error:',e); }
   }
 };
 
