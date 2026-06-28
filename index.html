@@ -353,72 +353,69 @@ function exportExcel(incInventory, incWithdraw, incPR, incProjects) {
 }
 
 function exportPDF(incInventory, incWithdraw, incPR, incProjects) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
   const today = new Date().toLocaleDateString('th-TH');
-  let y = 15;
-
-  doc.setFontSize(14); doc.setFont('helvetica','bold');
-  doc.text('AP Stock Manager - BG2', 14, y);
-  doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text(`Export: ${today}`, 14, y+6);
-  y += 16;
+  let html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
+  <title>AP Stock Export</title>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:11px;color:#1a1a18;margin:0;padding:20px;}
+    h1{font-size:16px;font-weight:600;color:#1e1b4b;margin:0 0 2px;}
+    .sub{font-size:11px;color:#6b6b68;margin-bottom:20px;}
+    h2{font-size:13px;font-weight:600;color:#534AB7;margin:20px 0 8px;display:flex;align-items:center;gap:6px;}
+    table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:11px;}
+    th{background:#1e1b4b;color:#fff;padding:6px 10px;text-align:left;font-weight:500;}
+    td{padding:5px 10px;border-bottom:0.5px solid #e5e5e3;}
+    tr:nth-child(even) td{background:#f8f8f8;}
+    .ok{color:#27500A;} .low{color:#BA7517;} .crit{color:#E24B4A;}
+    @media print{body{padding:10px;} @page{margin:15mm;size:A4 landscape;}}
+  </style></head><body>
+  <h1>AP Stock Manager — BG2</h1>
+  <div class="sub">Export วันที่ ${today}</div>`;
 
   if (incInventory) {
-    doc.setFontSize(11); doc.setFont('helvetica','bold');
-    doc.text('สินค้าคงคลัง', 14, y); y += 4;
-    doc.autoTable({
-      startY: y,
-      head: [['รหัส','ชื่อสินค้า','Brand','ราคา','คงเหลือ','Min','สถานะ']],
-      body: productsData.map(p=>[p.code, p.name, (p.brands||[p.brand]).join(', '), p.price||0, stockData[p.id]?.qty||0, p.min||0, getStatus(p.id).txt]),
-      styles:{fontSize:8}, headStyles:{fillColor:[83,74,183]},
-      margin:{left:14, right:14}
+    html += `<h2>สินค้าคงคลัง</h2><table>
+    <thead><tr><th>รหัส</th><th>ชื่อสินค้า</th><th>Brand</th><th>ราคา</th><th>คงเหลือ</th><th>Min Stock</th><th>สถานะ</th></tr></thead><tbody>`;
+    productsData.forEach(p => {
+      const s = getStatus(p.id);
+      const cls = s.cls==='b-ok'?'ok':s.cls==='b-low'?'low':'crit';
+      html += `<tr><td>${p.code}</td><td>${p.name}</td><td>${(p.brands||[p.brand]).join(', ')}</td><td>${(p.price||0).toLocaleString()}</td><td>${stockData[p.id]?.qty||0}</td><td>${p.min||0}</td><td class="${cls}">${s.txt}</td></tr>`;
     });
-    y = doc.lastAutoTable.finalY + 10;
+    html += `</tbody></table>`;
   }
 
   if (incWithdraw) {
-    if (y > 170) { doc.addPage(); y = 15; }
-    doc.setFontSize(11); doc.setFont('helvetica','bold');
-    doc.text('Log การเบิก', 14, y); y += 4;
-    doc.autoTable({
-      startY: y,
-      head: [['วันที่เบิก','วันที่ติดตั้ง','โครงการ','สินค้า','จำนวน']],
-      body: withdrawLog.map(l=>[fmtDate(l.createdAt), l.installDate||'', l.project||'', l.product||'', l.qty||0]),
-      styles:{fontSize:8}, headStyles:{fillColor:[83,74,183]},
-      margin:{left:14, right:14}
+    html += `<h2>Log การเบิก</h2><table>
+    <thead><tr><th>วันที่เบิก</th><th>วันที่ติดตั้ง</th><th>โครงการ</th><th>สินค้า</th><th>จำนวน</th><th>หมายเหตุ</th></tr></thead><tbody>`;
+    withdrawLog.forEach(l => {
+      html += `<tr><td>${fmtDate(l.createdAt)}</td><td>${l.installDate||'—'}</td><td>${l.project||'—'}</td><td>${l.product||'—'}</td><td>${l.qty||0}</td><td>${l.note||'—'}</td></tr>`;
     });
-    y = doc.lastAutoTable.finalY + 10;
+    html += `</tbody></table>`;
   }
 
   if (incPR) {
-    if (y > 170) { doc.addPage(); y = 15; }
-    doc.setFontSize(11); doc.setFont('helvetica','bold');
-    doc.text('PR Tracking', 14, y); y += 4;
-    doc.autoTable({
-      startY: y,
-      head: [['เลข PR','โครงการ','Vendor','วันที่','Status']],
-      body: prList.map(p=>[p.prNum||'', p.project||'', p.vendor||'CIT', fmtDate(p.createdAt), STATUS_MAP[p.status]?.txt||p.status]),
-      styles:{fontSize:8}, headStyles:{fillColor:[83,74,183]},
-      margin:{left:14, right:14}
+    html += `<h2>PR Tracking</h2><table>
+    <thead><tr><th>เลข PR</th><th>โครงการ</th><th>สินค้า</th><th>Vendor</th><th>วันที่</th><th>Status</th></tr></thead><tbody>`;
+    prList.forEach(p => {
+      const lines = (p.lines||[]).map(l=>`${l.product} x${l.qty}`).join(', ');
+      html += `<tr><td>${p.prNum||'—'}</td><td>${p.project||'—'}</td><td>${lines}</td><td>${p.vendor||'CIT'}</td><td>${fmtDate(p.createdAt)}</td><td>${STATUS_MAP[p.status]?.txt||p.status}</td></tr>`;
     });
-    y = doc.lastAutoTable.finalY + 10;
+    html += `</tbody></table>`;
   }
 
   if (incProjects) {
-    if (y > 170) { doc.addPage(); y = 15; }
-    doc.setFontSize(11); doc.setFont('helvetica','bold');
-    doc.text('โครงการ', 14, y); y += 4;
-    doc.autoTable({
-      startY: y,
-      head: [['Plant ID','โครงการ','Brand','Seg','ยูนิต','เหลือติดตั้ง','FC/ปี']],
-      body: projectsData.map(p=>[p.plantId, p.name, p.product||p.brand, p.segment||0, p.totalUnit||0, p.remainingInstall||0, p.fcYear||0]),
-      styles:{fontSize:8}, headStyles:{fillColor:[83,74,183]},
-      margin:{left:14, right:14}
+    html += `<h2>โครงการ</h2><table>
+    <thead><tr><th>Plant ID</th><th>โครงการ</th><th>Brand</th><th>Seg</th><th>ยูนิต</th><th>เหลือติดตั้ง</th><th>FC/ปี</th><th>FC/Q</th></tr></thead><tbody>`;
+    projectsData.forEach(p => {
+      html += `<tr><td>${p.plantId}</td><td>${p.name}</td><td>${p.product||p.brand}</td><td>${p.segment||0}</td><td>${p.totalUnit||0}</td><td>${p.remainingInstall||0}</td><td>${p.fcYear||0}</td><td>${p.fcQuarter||0}</td></tr>`;
     });
+    html += `</tbody></table>`;
   }
 
-  doc.save(`AP_Stock_BG2_${new Date().toISOString().slice(0,10)}.pdf`);
+  html += `</body></html>`;
+
+  const win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.print(); };
 }
 
 // ── PIN / EDIT MODE ──
