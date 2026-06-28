@@ -749,12 +749,15 @@ function renderInventory() {
   const rows = productsData.map(p => {
     const qty = stockData[p.id]?.qty ?? '...';
     const s = getStatus(p.id);
-    const brandCls = {pleno:'b-pleno',grande:'b-grande',bkm:'b-bkm',bkme:'b-bkme',bkmc:'b-bkmc',api:'b-api',dist:'b-dist'}[p.brand]||'b-ok';
+    const brandBadges = (p.brands&&p.brands.length>0?p.brands:[p.brand]).map(b=>{
+      const bc = {pleno:'b-pleno',grande:'b-grande',bkm:'b-bkm',bkme:'b-bkme',bkmc:'b-bkmc',api:'b-api',dist:'b-dist'}[b]||'b-ok';
+      return `<span class="badge ${bc}" style="font-size:10px;">${b}</span>`;
+    }).join(' ');
     return `<tr id="inv-row-${p.id}" data-v="cit">
       <td style="font-size:10px;color:var(--text3);">${p.code}</td>
       <td><strong>${p.name}</strong></td>
       <td style="font-size:10px;">CIT</td>
-      <td><span class="badge ${brandCls}">${p.brand}</span></td>
+      <td>${brandBadges}</td>
       <td id="inv-price-${p.id}">${p.price?p.price.toLocaleString():'—'}</td>
       <td id="inv-qty-${p.id}">${qty}</td>
       <td>${p.min}</td>
