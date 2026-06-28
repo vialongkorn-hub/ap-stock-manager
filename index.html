@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AP Stock Manager</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -585,7 +586,7 @@ function renderTab(id) {
     }
   } else {
     switch(id) {
-      case 'overview': renderOverview(); break;
+      case 'overview': renderOverview(); setTimeout(initFCChart, 50); break;
       case 'inventory': renderInventory(); break;
       case 'withdraw': renderWithdraw(); break;
       case 'pr': renderPRTab(); break;
@@ -741,9 +742,135 @@ function renderOverview() {
         <div class="card"><div class="card-hd"><i class="ti ti-transfer-out"></i> เบิกล่าสุด</div>${recentLog}</div>
         <div class="ai-box"><div class="ai-lbl"><i class="ti ti-sparkles"></i> AI Insight</div><div class="ai-txt">${aiTxt}</div></div>
       </div>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="card-hd" style="margin-bottom:0;"><i class="ti ti-trending-up"></i> Forecast vs เบิกจริง</div>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="fc-btn-month" onclick="switchFCView('month')">รายเดือน</button>
+          <button class="toggle-btn" id="fc-btn-quarter" onclick="switchFCView('quarter')">รายไตรมาส</button>
+          <button class="toggle-btn" id="fc-btn-product" onclick="switchFCView('product')">รายสินค้า</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:10px;font-size:11px;color:var(--text2);">
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#2a78d6;display:inline-block;"></span>Forecast</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#1baf7a;display:inline-block;"></span>เบิกจริง</span>
+      </div>
+      <div style="position:relative;width:100%;height:240px;">
+        <canvas id="fc-chart" role="img" aria-label="กราฟ Forecast vs เบิกจริง"></canvas>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;">
+        <div class="metric"><div class="metric-lbl">FC รวม</div><div class="metric-val" id="fc-stat-fc" style="font-size:20px;">—</div></div>
+        <div class="metric"><div class="metric-lbl">เบิกจริง</div><div class="metric-val" id="fc-stat-act" style="font-size:20px;">—</div></div>
+        <div class="metric"><div class="metric-lbl">ทำได้ vs แผน</div><div class="metric-val" id="fc-stat-pct" style="font-size:20px;">—</div></div>
+      </div>
     </div>`;
 }
-window.switchPeriod = function(p) { currentPeriod = p; renderTab('overview'); };
+window.switchPeriod = function(p) { currentPeriod = p; renderTab('overview'); setTimeout(initFCChart, 50); };
+
+let fcChart = null;
+function initFCChart() {
+  const canvas = document.getElementById('fc-chart');
+  if (!canvas) return;
+  if (fcChart) { fcChart.destroy(); fcChart = null; }
+
+  // คำนวณ FC รายเดือนจาก projectsData
+  const now = new Date();
+  const monthLabels = Array.from({length:6},(_,i)=>{
+    const d = new Date(now.getFullYear(), now.getMonth()-(5-i), 1);
+    return ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][d.getMonth()];
+  });
+  const totalFCMonth = projectsData.reduce((s,p)=>s+(p.fcMonth||0),0);
+  const fcMonthData = monthLabels.map(()=>Math.round(totalFCMonth));
+  const actMonthData = Array.from({length:6},(_,i)=>{
+    const d = new Date(now.getFullYear(), now.getMonth()-(5-i), 1);
+    return withdrawLog.filter(l=>{
+      if (!l.createdAt) return false;
+      const ld = l.createdAt.toDate?l.createdAt.toDate():new Date(l.createdAt);
+      return ld.getFullYear()===d.getFullYear()&&ld.getMonth()===d.getMonth();
+    }).reduce((s,l)=>s+(l.qty||0),0);
+  });
+
+  // รายไตรมาส
+  const qLabels=['Q1','Q2','Q3','Q4'];
+  const totalFCQ = projectsData.reduce((s,p)=>s+(p.fcQuarter||0),0);
+  const fcQData = qLabels.map(()=>Math.round(totalFCQ));
+  const actQData = qLabels.map((_,i)=>{
+    const qStart = new Date(now.getFullYear(), i*3, 1);
+    const qEnd   = new Date(now.getFullYear(), i*3+3, 0);
+    return withdrawLog.filter(l=>{
+      if (!l.createdAt) return false;
+      const ld = l.createdAt.toDate?l.createdAt.toDate():new Date(l.createdAt);
+      return ld>=qStart&&ld<=qEnd;
+    }).reduce((s,l)=>s+(l.qty||0),0);
+  });
+
+  // รายสินค้า
+  const prodLabels = productsData.map(p=>p.name.replace('Kudos ',''));
+  const fcProdData = productsData.map(p=>{
+    const brands = p.brands||[];
+    return Math.round(projectsData.filter(proj=>brands.includes(proj.brand)).reduce((s,proj)=>s+(proj.fcMonth||0),0));
+  });
+  const actProdData = productsData.map(p=>
+    withdrawLog.filter(l=>l.productId===p.id).reduce((s,l)=>s+(l.qty||0),0)
+  );
+
+  const views = {
+    month:{labels:monthLabels, fc:fcMonthData, act:actMonthData},
+    quarter:{labels:qLabels, fc:fcQData, act:actQData},
+    product:{labels:prodLabels, fc:fcProdData, act:actProdData},
+  };
+
+  window._fcViews = views;
+
+  fcChart = new Chart(canvas, {
+    type:'bar',
+    data:{
+      labels:views.month.labels,
+      datasets:[
+        {label:'Forecast',data:views.month.fc,backgroundColor:'#2a78d6',borderRadius:4,barPercentage:0.45},
+        {label:'เบิกจริง',data:views.month.act,backgroundColor:'#1baf7a',borderRadius:4,barPercentage:0.45}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11},maxRotation:45}},
+        y:{grid:{color:'#e1e0d9'},ticks:{font:{size:11}},beginAtZero:true}
+      }
+    }
+  });
+  updateFCStats('month');
+}
+
+window.switchFCView = function(v) {
+  ['month','quarter','product'].forEach(id=>{
+    const btn = document.getElementById('fc-btn-'+id);
+    if (btn) { btn.classList.toggle('active', v===id); }
+  });
+  if (!fcChart || !window._fcViews) return;
+  const d = window._fcViews[v];
+  fcChart.data.labels = d.labels;
+  fcChart.data.datasets[0].data = d.fc;
+  fcChart.data.datasets[1].data = d.act;
+  fcChart.update();
+  updateFCStats(v);
+};
+
+function updateFCStats(v) {
+  if (!window._fcViews) return;
+  const d = window._fcViews[v];
+  const totalFC  = d.fc.reduce((s,x)=>s+x,0);
+  const totalAct = d.act.reduce((s,x)=>s+x,0);
+  const pct = totalFC > 0 ? Math.round(totalAct/totalFC*100) : 0;
+  const fcEl  = document.getElementById('fc-stat-fc');
+  const actEl = document.getElementById('fc-stat-act');
+  const pctEl = document.getElementById('fc-stat-pct');
+  if (fcEl)  fcEl.textContent  = totalFC.toLocaleString();
+  if (actEl) actEl.textContent = totalAct.toLocaleString();
+  if (pctEl) { pctEl.textContent = pct+'%'; pctEl.style.color = pct<50?'#E24B4A':pct<80?'#BA7517':'#1D9E75'; }
+}
 
 function renderInventory() {
   const rows = productsData.map(p => {
