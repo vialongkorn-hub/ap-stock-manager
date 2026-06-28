@@ -1864,7 +1864,7 @@ function renderInventoryMobile() {
       <div style="width:34px;height:34px;border-radius:9px;background:${ibg};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-lock" style="font-size:16px;color:${ic};" aria-hidden="true"></i></div>
       <div style="flex:1;">
         <div style="font-size:13px;font-weight:500;">${p.name}</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:1px;">CIT · ราคา ${p.price?p.price.toLocaleString():'—'} บาท</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:1px;">CIT · ราคา ${p.price?p.price.toLocaleString():'—'} บาท · ${(p.brands&&p.brands.length>0?p.brands:[p.brand]).join(', ')}</div>
       </div>
       <div style="text-align:right;" id="mb-inv-${p.id}">
         <button onclick="mbTapQty('${p.id}','${docId}',${qty})"
