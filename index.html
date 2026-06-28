@@ -499,6 +499,23 @@ async function seedProjects() {
 // Runtime products cache (synced from Firebase)
 let productsData = [...PRODUCTS]; // เริ่มจาก hardcode ก่อน Firebase sync
 
+async function migrateProductBrands() {
+  const brandMap = {
+    Y02K:['pleno'], Y02H:['pleno'],
+    J03:['grande','bkme','bkmc'], J03P:['dist'],
+    P60:['bkm'], A2H:['bkm','api'], A2K:['bkm'],
+    A100:['grande','bkme','bkmc'], EST:['api']
+  };
+  const snap = await getDocs(collection(db,'products'));
+  for (const d of snap.docs) {
+    const data = d.data();
+    if (!data.brands || data.brands.length === 0) {
+      const brands = brandMap[data.id] || [];
+      await updateDoc(doc(db,'products',d.id), {brands, brand:brands[0]||data.brand||'pleno'});
+    }
+  }
+}
+
 async function seedProducts() {
   const snap = await getDocs(collection(db, 'products'));
   if (!snap.empty) return;
@@ -2438,6 +2455,7 @@ async function main() {
   await initFirestore();
   await seedProjects();
   await seedProducts();
+  await migrateProductBrands();
   startListeners();
   renderTab('overview');
 }
