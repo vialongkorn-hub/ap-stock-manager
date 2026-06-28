@@ -6,6 +6,9 @@
 <title>AP Stock Manager</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -162,10 +165,66 @@ tr:hover td{background:var(--bg3);}
     <div class="topbar">
       <div class="topbar-title" id="page-title">ภาพรวม</div>
       <button class="tb-btn" id="edit-mode-btn" onclick="openPINOverlay()"><i class="ti ti-lock"></i> แก้ไข</button>
-      <button class="tb-btn"><i class="ti ti-download"></i> Export</button>
+      <button class="tb-btn" onclick="openExportDialog()"><i class="ti ti-download"></i> Export</button>
     </div>
     <div class="content" id="main-content">
       <div class="loading"><div class="spinner"></div><div>กำลังโหลดข้อมูล...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT DIALOG -->
+<div id="export-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border-radius:16px;padding:28px 32px;width:420px;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <i class="ti ti-download" style="font-size:20px;color:var(--purple);"></i>
+      <div style="font-size:15px;font-weight:600;">Export ข้อมูล</div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:20px;">เลือก format และข้อมูลที่ต้องการ export</div>
+
+    <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;">Format</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;">
+      <div id="exp-opt-excel" onclick="selectExportFmt('excel')" style="padding:12px;border-radius:10px;border:2px solid var(--purple);background:var(--purple-light);cursor:pointer;">
+        <i class="ti ti-file-spreadsheet" style="font-size:20px;color:var(--purple);display:block;margin-bottom:4px;"></i>
+        <div style="font-size:13px;font-weight:500;color:var(--purple);">Excel (.xlsx)</div>
+        <div style="font-size:11px;color:var(--purple);">หลาย sheet ใน 1 ไฟล์</div>
+      </div>
+      <div id="exp-opt-pdf" onclick="selectExportFmt('pdf')" style="padding:12px;border-radius:10px;border:1px solid var(--border2);background:none;cursor:pointer;">
+        <i class="ti ti-file-type-pdf" style="font-size:20px;color:var(--text2);display:block;margin-bottom:4px;"></i>
+        <div style="font-size:13px;font-weight:500;color:var(--text);">PDF</div>
+        <div style="font-size:11px;color:var(--text2);">พิมพ์หรือแชร์ได้ง่าย</div>
+      </div>
+    </div>
+
+    <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;">ข้อมูลที่ต้องการ</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;">
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;">
+        <input type="checkbox" id="exp-inventory" checked style="width:15px;height:15px;accent-color:var(--purple);">
+        <i class="ti ti-packages" style="font-size:16px;color:var(--text2);"></i>
+        <span style="font-size:13px;">สินค้าคงคลัง</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;">
+        <input type="checkbox" id="exp-withdraw" checked style="width:15px;height:15px;accent-color:var(--purple);">
+        <i class="ti ti-transfer-out" style="font-size:16px;color:var(--text2);"></i>
+        <span style="font-size:13px;">Log การเบิก</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;">
+        <input type="checkbox" id="exp-pr" checked style="width:15px;height:15px;accent-color:var(--purple);">
+        <i class="ti ti-file-invoice" style="font-size:16px;color:var(--text2);"></i>
+        <span style="font-size:13px;">PR Tracking</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;">
+        <input type="checkbox" id="exp-projects" checked style="width:15px;height:15px;accent-color:var(--purple);">
+        <i class="ti ti-building" style="font-size:16px;color:var(--text2);"></i>
+        <span style="font-size:13px;">โครงการ</span>
+      </label>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button onclick="closeExportDialog()" style="flex:1;height:40px;border-radius:9px;border:1px solid var(--border2);background:none;color:var(--text2);font-size:13px;cursor:pointer;">ยกเลิก</button>
+      <button onclick="doExport()" style="flex:2;height:40px;border-radius:9px;border:none;background:var(--purple);color:#fff;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+        <i class="ti ti-download" style="font-size:15px;"></i> Export
+      </button>
     </div>
   </div>
 </div>
@@ -212,6 +271,155 @@ let currentTab = 'overview';
 let currentPeriod = 'week';
 let prFilter = 'all';
 let selectedProject = null;
+
+// ── EXPORT ──
+let exportFmt = 'excel';
+
+window.openExportDialog = function() {
+  document.getElementById('export-overlay').style.display = 'flex';
+};
+window.closeExportDialog = function() {
+  document.getElementById('export-overlay').style.display = 'none';
+};
+window.selectExportFmt = function(f) {
+  exportFmt = f;
+  const excel = document.getElementById('exp-opt-excel');
+  const pdf   = document.getElementById('exp-opt-pdf');
+  if (f==='excel') {
+    excel.style.border='2px solid var(--purple)'; excel.style.background='var(--purple-light)';
+    excel.querySelector('i').style.color='var(--purple)';
+    excel.querySelectorAll('div').forEach(d=>d.style.color='var(--purple)');
+    pdf.style.border='1px solid var(--border2)'; pdf.style.background='none';
+    pdf.querySelector('i').style.color='var(--text2)';
+  } else {
+    pdf.style.border='2px solid var(--purple)'; pdf.style.background='var(--purple-light)';
+    pdf.querySelector('i').style.color='var(--purple)';
+    pdf.querySelectorAll('div').forEach(d=>d.style.color='var(--purple)');
+    excel.style.border='1px solid var(--border2)'; excel.style.background='none';
+    excel.querySelector('i').style.color='var(--text2)';
+  }
+};
+
+window.doExport = function() {
+  closeExportDialog();
+  const incInventory = document.getElementById('exp-inventory')?.checked;
+  const incWithdraw  = document.getElementById('exp-withdraw')?.checked;
+  const incPR        = document.getElementById('exp-pr')?.checked;
+  const incProjects  = document.getElementById('exp-projects')?.checked;
+  if (exportFmt === 'excel') exportExcel(incInventory, incWithdraw, incPR, incProjects);
+  else exportPDF(incInventory, incWithdraw, incPR, incProjects);
+};
+
+function exportExcel(incInventory, incWithdraw, incPR, incProjects) {
+  const wb = XLSX.utils.book_new();
+  const today = new Date().toLocaleDateString('th-TH');
+
+  if (incInventory) {
+    const rows = [['รหัส','ชื่อสินค้า','Vendor','Brand','ราคา','คงเหลือ','Min Stock','สถานะ']];
+    productsData.forEach(p => {
+      const s = getStatus(p.id);
+      rows.push([p.code, p.name, 'CIT', (p.brands||[p.brand]).join(', '), p.price||0, stockData[p.id]?.qty||0, p.min||0, s.txt]);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'สินค้าคงคลัง');
+  }
+
+  if (incWithdraw) {
+    const rows = [['วันที่เบิก','วันที่ติดตั้ง','โครงการ','สินค้า','จำนวน','หมายเหตุ']];
+    withdrawLog.forEach(l => {
+      rows.push([fmtDate(l.createdAt), l.installDate||'', l.project||'', l.product||'', l.qty||0, l.note||'']);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Log การเบิก');
+  }
+
+  if (incPR) {
+    const rows = [['เลข PR','โครงการ','สินค้า','Vendor','วันที่','Status']];
+    prList.forEach(p => {
+      const lines = (p.lines||[]).map(l=>`${l.product} x${l.qty}`).join(', ');
+      const s = STATUS_MAP[p.status]?.txt||p.status;
+      rows.push([p.prNum||'', p.project||'', lines, p.vendor||'CIT', fmtDate(p.createdAt), s]);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'PR Tracking');
+  }
+
+  if (incProjects) {
+    const rows = [['Plant ID','โครงการ','Brand','Segment','ยูนิต','ไม่ก่อสร้าง','เหลือติดตั้ง','FC/ปี','FC/Q','FC/เดือน','Drive Link']];
+    projectsData.forEach(p => {
+      rows.push([p.plantId, p.name, p.product||p.brand, p.segment||0, p.totalUnit||0, p.notStarted||0, p.remainingInstall||0, p.fcYear||0, p.fcQuarter||0, p.fcMonth||0, p.driveLink||'']);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'โครงการ');
+  }
+
+  XLSX.writeFile(wb, `AP_Stock_BG2_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function exportPDF(incInventory, incWithdraw, incPR, incProjects) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
+  const today = new Date().toLocaleDateString('th-TH');
+  let y = 15;
+
+  doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text('AP Stock Manager - BG2', 14, y);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(`Export: ${today}`, 14, y+6);
+  y += 16;
+
+  if (incInventory) {
+    doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text('สินค้าคงคลัง', 14, y); y += 4;
+    doc.autoTable({
+      startY: y,
+      head: [['รหัส','ชื่อสินค้า','Brand','ราคา','คงเหลือ','Min','สถานะ']],
+      body: productsData.map(p=>[p.code, p.name, (p.brands||[p.brand]).join(', '), p.price||0, stockData[p.id]?.qty||0, p.min||0, getStatus(p.id).txt]),
+      styles:{fontSize:8}, headStyles:{fillColor:[83,74,183]},
+      margin:{left:14, right:14}
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  }
+
+  if (incWithdraw) {
+    if (y > 170) { doc.addPage(); y = 15; }
+    doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text('Log การเบิก', 14, y); y += 4;
+    doc.autoTable({
+      startY: y,
+      head: [['วันที่เบิก','วันที่ติดตั้ง','โครงการ','สินค้า','จำนวน']],
+      body: withdrawLog.map(l=>[fmtDate(l.createdAt), l.installDate||'', l.project||'', l.product||'', l.qty||0]),
+      styles:{fontSize:8}, headStyles:{fillColor:[83,74,183]},
+      margin:{left:14, right:14}
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  }
+
+  if (incPR) {
+    if (y > 170) { doc.addPage(); y = 15; }
+    doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text('PR Tracking', 14, y); y += 4;
+    doc.autoTable({
+      startY: y,
+      head: [['เลข PR','โครงการ','Vendor','วันที่','Status']],
+      body: prList.map(p=>[p.prNum||'', p.project||'', p.vendor||'CIT', fmtDate(p.createdAt), STATUS_MAP[p.status]?.txt||p.status]),
+      styles:{fontSize:8}, headStyles:{fillColor:[83,74,183]},
+      margin:{left:14, right:14}
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  }
+
+  if (incProjects) {
+    if (y > 170) { doc.addPage(); y = 15; }
+    doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text('โครงการ', 14, y); y += 4;
+    doc.autoTable({
+      startY: y,
+      head: [['Plant ID','โครงการ','Brand','Seg','ยูนิต','เหลือติดตั้ง','FC/ปี']],
+      body: projectsData.map(p=>[p.plantId, p.name, p.product||p.brand, p.segment||0, p.totalUnit||0, p.remainingInstall||0, p.fcYear||0]),
+      styles:{fontSize:8}, headStyles:{fillColor:[83,74,183]},
+      margin:{left:14, right:14}
+    });
+  }
+
+  doc.save(`AP_Stock_BG2_${new Date().toISOString().slice(0,10)}.pdf`);
+}
 
 // ── PIN / EDIT MODE ──
 const EDIT_PIN = '599388';
