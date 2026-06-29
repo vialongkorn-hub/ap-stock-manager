@@ -957,124 +957,215 @@ function renderOverview() {
           <button class="toggle-btn" id="fc-btn-product" onclick="switchFCView('product')">รายสินค้า</button>
         </div>
       </div>
-      <div style="display:flex;gap:10px;margin-bottom:10px;font-size:11px;color:var(--text2);">
-        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#2a78d6;display:inline-block;"></span>Forecast</span>
-        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#1baf7a;display:inline-block;"></span>เบิกจริง</span>
+      <div style="display:flex;gap:12px;margin-bottom:10px;font-size:11px;color:var(--text2);">
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#534AB7;display:inline-block;"></span>FC แผน</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#E24B4A;display:inline-block;"></span>FC ตั้งเอง</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block;"></span>เบิกจริง</span>
       </div>
       <div style="position:relative;width:100%;height:240px;">
         <canvas id="fc-chart" role="img" aria-label="กราฟ Forecast vs เบิกจริง"></canvas>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;">
-        <div class="metric"><div class="metric-lbl">FC รวม</div><div class="metric-val" id="fc-stat-fc" style="font-size:20px;">—</div></div>
-        <div class="metric"><div class="metric-lbl">เบิกจริง</div><div class="metric-val" id="fc-stat-act" style="font-size:20px;">—</div></div>
-        <div class="metric"><div class="metric-lbl">ทำได้ vs แผน</div><div class="metric-val" id="fc-stat-pct" style="font-size:20px;">—</div></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px;">
+        <div class="metric"><div class="metric-lbl" style="color:#534AB7;">FC แผน</div><div class="metric-val" id="fc-stat-fc" style="font-size:20px;color:#534AB7;">—</div></div>
+        <div class="metric"><div class="metric-lbl" style="color:#E24B4A;">FC ตั้งเอง</div><div class="metric-val" id="fc-stat-custom" style="font-size:20px;color:#E24B4A;">—</div></div>
+        <div class="metric"><div class="metric-lbl" style="color:#1D9E75;">เบิกจริง</div><div class="metric-val" id="fc-stat-act" style="font-size:20px;color:#1D9E75;">—</div></div>
+        <div class="metric"><div class="metric-lbl">ทำได้ vs FC ตั้งเอง</div><div class="metric-val" id="fc-stat-pct" style="font-size:20px;">—</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><i class="ti ti-settings" style="color:var(--purple);"></i> ตั้ง FC เอง</div>
+      <div id="fc-set-month">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">จำนวนที่ต้องการสั่ง/เบิกต่อเดือน (ชิ้น)</div>
+        <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px;margin-bottom:12px;" id="fc-month-inputs"></div>
+        <button class="tb-btn primary" onclick="saveCustomFC('month')"><i class="ti ti-device-floppy"></i> บันทึก FC</button>
+      </div>
+      <div id="fc-set-quarter" style="display:none;">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">จำนวนที่ต้องการสั่ง/เบิกต่อไตรมาส (ชิ้น)</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;" id="fc-quarter-inputs"></div>
+        <button class="tb-btn primary" onclick="saveCustomFC('quarter')"><i class="ti ti-device-floppy"></i> บันทึก FC</button>
+      </div>
+      <div id="fc-set-product" style="display:none;">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">จำนวนที่ต้องการสั่ง/เบิกต่อสินค้า (ชิ้น/ปี)</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;" id="fc-product-inputs"></div>
+        <button class="tb-btn primary" onclick="saveCustomFC('product')"><i class="ti ti-device-floppy"></i> บันทึก FC</button>
       </div>
     </div>`;
 }
 window.switchPeriod = function(p) { currentPeriod = p; renderTab('overview'); setTimeout(initFCChart, 50); };
 
 let fcChart = null;
+let customFCData = {month:Array(12).fill(0), quarter:Array(4).fill(0), product:{}};
+let currentFCView = 'month';
+
+async function loadCustomFC() {
+  try {
+    const snap = await getDocs(collection(db,'customFC'));
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.type === 'month') customFCData.month = data.values||Array(12).fill(0);
+      if (data.type === 'quarter') customFCData.quarter = data.values||Array(4).fill(0);
+      if (data.type === 'product') customFCData.product = data.values||{};
+    });
+  } catch(e) { console.error(e); }
+}
+
+window.saveCustomFC = async function(type) {
+  const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  let values;
+  if (type==='month') {
+    values = MONTHS_TH.map((_,i)=>parseInt(document.getElementById('fc-m-'+i)?.value)||0);
+    customFCData.month = values;
+  } else if (type==='quarter') {
+    values = [0,1,2,3].map(i=>parseInt(document.getElementById('fc-q-'+i)?.value)||0);
+    customFCData.quarter = values;
+  } else {
+    values = {};
+    productsData.forEach(p=>{ values[p.id] = parseInt(document.getElementById('fc-p-'+p.id)?.value)||0; });
+    customFCData.product = values;
+  }
+  // upsert to Firebase
+  const snap = await getDocs(collection(db,'customFC'));
+  let existing = null;
+  snap.forEach(d=>{ if(d.data().type===type) existing=d.id; });
+  if (existing) await updateDoc(doc(db,'customFC',existing),{type,values,updatedAt:serverTimestamp()});
+  else await addDoc(collection(db,'customFC'),{type,values,updatedAt:serverTimestamp()});
+  initFCChart();
+};
+
+function buildFCInputs() {
+  const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const mGrid = document.getElementById('fc-month-inputs');
+  if (mGrid) {
+    mGrid.innerHTML = MONTHS_TH.map((_,i)=>`
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <div style="font-size:10px;color:var(--text2);">${MONTHS_TH[i]}</div>
+        <input id="fc-m-${i}" type="number" value="${customFCData.month[i]||0}" style="height:30px;border:1px solid var(--border2);border-radius:6px;padding:0 4px;font-size:11px;text-align:center;width:100%;box-sizing:border-box;" oninput="updateFCChartLive()">
+      </div>`).join('');
+  }
+  const qGrid = document.getElementById('fc-quarter-inputs');
+  if (qGrid) {
+    qGrid.innerHTML = ['Q1','Q2','Q3','Q4'].map((q,i)=>`
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <div style="font-size:10px;color:var(--text2);">${q}</div>
+        <input id="fc-q-${i}" type="number" value="${customFCData.quarter[i]||0}" style="height:30px;border:1px solid var(--border2);border-radius:6px;padding:0 8px;font-size:11px;text-align:center;width:100%;box-sizing:border-box;" oninput="updateFCChartLive()">
+      </div>`).join('');
+  }
+  const pGrid = document.getElementById('fc-product-inputs');
+  if (pGrid) {
+    pGrid.innerHTML = productsData.map(p=>`
+      <div style="display:grid;grid-template-columns:1fr 100px;gap:8px;align-items:center;">
+        <div style="font-size:12px;">${p.name}</div>
+        <input id="fc-p-${p.id}" type="number" value="${customFCData.product[p.id]||0}" style="height:30px;border:1px solid var(--border2);border-radius:6px;padding:0 8px;font-size:11px;text-align:center;width:100%;box-sizing:border-box;" oninput="updateFCChartLive()">
+      </div>`).join('');
+  }
+}
+
+window.updateFCChartLive = function() {
+  if (!fcChart) return;
+  const custom = getCustomFCValues(currentFCView);
+  fcChart.data.datasets[1].data = custom;
+  fcChart.update('none');
+  updateFCStats(currentFCView, custom);
+};
+
+function getCustomFCValues(v) {
+  const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  if (v==='month') {
+    const now = new Date();
+    return Array.from({length:6},(_,i)=>{
+      const monthIdx = (now.getMonth()-(5-i)+12)%12;
+      const el = document.getElementById('fc-m-'+monthIdx);
+      return el ? parseInt(el.value)||0 : customFCData.month[monthIdx]||0;
+    });
+  }
+  if (v==='quarter') return [0,1,2,3].map(i=>{ const el=document.getElementById('fc-q-'+i); return el?parseInt(el.value)||0:customFCData.quarter[i]||0; });
+  return productsData.map(p=>{ const el=document.getElementById('fc-p-'+p.id); return el?parseInt(el.value)||0:customFCData.product[p.id]||0; });
+}
+
 function initFCChart() {
   const canvas = document.getElementById('fc-chart');
   if (!canvas) return;
   if (fcChart) { fcChart.destroy(); fcChart = null; }
+  buildFCInputs();
 
-  // คำนวณ FC รายเดือนจาก projectsData
   const now = new Date();
-  const monthLabels = Array.from({length:6},(_,i)=>{
-    const d = new Date(now.getFullYear(), now.getMonth()-(5-i), 1);
-    return ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][d.getMonth()];
-  });
+  const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const monthLabels = Array.from({length:6},(_,i)=>{ const d=new Date(now.getFullYear(),now.getMonth()-(5-i),1); return MONTHS_TH[d.getMonth()]; });
   const totalFCMonth = projectsData.reduce((s,p)=>s+(p.fcMonth||0),0);
   const fcMonthData = monthLabels.map(()=>Math.round(totalFCMonth));
   const actMonthData = Array.from({length:6},(_,i)=>{
-    const d = new Date(now.getFullYear(), now.getMonth()-(5-i), 1);
-    return withdrawLog.filter(l=>{
-      if (!l.createdAt) return false;
-      const ld = l.createdAt.toDate?l.createdAt.toDate():new Date(l.createdAt);
-      return ld.getFullYear()===d.getFullYear()&&ld.getMonth()===d.getMonth();
-    }).reduce((s,l)=>s+(l.qty||0),0);
+    const d=new Date(now.getFullYear(),now.getMonth()-(5-i),1);
+    return withdrawLog.filter(l=>{ if(!l.createdAt) return false; const ld=l.createdAt.toDate?l.createdAt.toDate():new Date(l.createdAt); return ld.getFullYear()===d.getFullYear()&&ld.getMonth()===d.getMonth(); }).reduce((s,l)=>s+(l.qty||0),0);
   });
 
-  // รายไตรมาส
-  const qLabels=['Q1','Q2','Q3','Q4'];
   const totalFCQ = projectsData.reduce((s,p)=>s+(p.fcQuarter||0),0);
-  const fcQData = qLabels.map(()=>Math.round(totalFCQ));
-  const actQData = qLabels.map((_,i)=>{
-    const qStart = new Date(now.getFullYear(), i*3, 1);
-    const qEnd   = new Date(now.getFullYear(), i*3+3, 0);
-    return withdrawLog.filter(l=>{
-      if (!l.createdAt) return false;
-      const ld = l.createdAt.toDate?l.createdAt.toDate():new Date(l.createdAt);
-      return ld>=qStart&&ld<=qEnd;
-    }).reduce((s,l)=>s+(l.qty||0),0);
-  });
+  const fcQData = [0,1,2,3].map(()=>Math.round(totalFCQ));
+  const actQData = [0,1,2,3].map(i=>{ const qs=new Date(now.getFullYear(),i*3,1),qe=new Date(now.getFullYear(),i*3+3,0); return withdrawLog.filter(l=>{ if(!l.createdAt) return false; const ld=l.createdAt.toDate?l.createdAt.toDate():new Date(l.createdAt); return ld>=qs&&ld<=qe; }).reduce((s,l)=>s+(l.qty||0),0); });
 
-  // รายสินค้า
   const prodLabels = productsData.map(p=>p.name.replace('Kudos ',''));
-  const fcProdData = productsData.map(p=>{
-    const brands = p.brands||[];
-    return Math.round(projectsData.filter(proj=>brands.includes(proj.brand)).reduce((s,proj)=>s+(proj.fcMonth||0),0));
-  });
-  const actProdData = productsData.map(p=>
-    withdrawLog.filter(l=>l.productId===p.id).reduce((s,l)=>s+(l.qty||0),0)
-  );
+  const fcProdData = productsData.map(p=>{ const brands=p.brands||[]; return Math.round(projectsData.filter(proj=>brands.includes(proj.brand)).reduce((s,proj)=>s+(proj.fcMonth||0),0)); });
+  const actProdData = productsData.map(p=>withdrawLog.filter(l=>l.productId===p.id).reduce((s,l)=>s+(l.qty||0),0));
 
-  const views = {
-    month:{labels:monthLabels, fc:fcMonthData, act:actMonthData},
-    quarter:{labels:qLabels, fc:fcQData, act:actQData},
-    product:{labels:prodLabels, fc:fcProdData, act:actProdData},
+  window._fcViews = {
+    month:{labels:monthLabels, plan:fcMonthData, act:actMonthData},
+    quarter:{labels:['Q1','Q2','Q3','Q4'], plan:fcQData, act:actQData},
+    product:{labels:prodLabels, plan:fcProdData, act:actProdData},
   };
 
-  window._fcViews = views;
-
+  const customData = getCustomFCValues('month');
   fcChart = new Chart(canvas, {
     type:'bar',
     data:{
-      labels:views.month.labels,
+      labels:window._fcViews.month.labels,
       datasets:[
-        {label:'Forecast',data:views.month.fc,backgroundColor:'#2a78d6',borderRadius:4,barPercentage:0.45},
-        {label:'เบิกจริง',data:views.month.act,backgroundColor:'#1baf7a',borderRadius:4,barPercentage:0.45}
+        {label:'FC แผน',data:window._fcViews.month.plan,backgroundColor:'#534AB7',borderRadius:4,barPercentage:0.28,categoryPercentage:0.9},
+        {label:'FC ตั้งเอง',data:customData,backgroundColor:'#E24B4A',borderRadius:4,barPercentage:0.28,categoryPercentage:0.9},
+        {label:'เบิกจริง',data:window._fcViews.month.act,backgroundColor:'#1D9E75',borderRadius:4,barPercentage:0.28,categoryPercentage:0.9}
       ]
     },
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false}},
-      scales:{
-        x:{grid:{display:false},ticks:{font:{size:11},maxRotation:45}},
-        y:{grid:{color:'#e1e0d9'},ticks:{font:{size:11}},beginAtZero:true}
-      }
+      scales:{x:{grid:{display:false},ticks:{font:{size:11},maxRotation:45}},y:{grid:{color:'#e1e0d9'},ticks:{font:{size:11}},beginAtZero:true}}
     }
   });
-  updateFCStats('month');
+  updateFCStats('month', customData);
 }
 
 window.switchFCView = function(v) {
+  currentFCView = v;
   ['month','quarter','product'].forEach(id=>{
     const btn = document.getElementById('fc-btn-'+id);
-    if (btn) { btn.classList.toggle('active', v===id); }
+    if (btn) btn.classList.toggle('active', v===id);
+    const sec = document.getElementById('fc-set-'+id);
+    if (sec) sec.style.display = v===id?'':'none';
   });
-  if (!fcChart || !window._fcViews) return;
+  if (!fcChart||!window._fcViews) return;
   const d = window._fcViews[v];
+  const custom = getCustomFCValues(v);
   fcChart.data.labels = d.labels;
-  fcChart.data.datasets[0].data = d.fc;
-  fcChart.data.datasets[1].data = d.act;
+  fcChart.data.datasets[0].data = d.plan;
+  fcChart.data.datasets[1].data = custom;
+  fcChart.data.datasets[2].data = d.act;
   fcChart.update();
-  updateFCStats(v);
+  updateFCStats(v, custom);
 };
 
-function updateFCStats(v) {
+function updateFCStats(v, custom) {
   if (!window._fcViews) return;
   const d = window._fcViews[v];
-  const totalFC  = d.fc.reduce((s,x)=>s+x,0);
-  const totalAct = d.act.reduce((s,x)=>s+x,0);
-  const pct = totalFC > 0 ? Math.round(totalAct/totalFC*100) : 0;
+  const tPlan   = d.plan.reduce((s,x)=>s+x,0);
+  const tCustom = (custom||getCustomFCValues(v)).reduce((s,x)=>s+x,0);
+  const tAct    = d.act.reduce((s,x)=>s+x,0);
+  const pct = tCustom>0?Math.round(tAct/tCustom*100):0;
   const fcEl  = document.getElementById('fc-stat-fc');
+  const cusEl = document.getElementById('fc-stat-custom');
   const actEl = document.getElementById('fc-stat-act');
   const pctEl = document.getElementById('fc-stat-pct');
-  if (fcEl)  fcEl.textContent  = totalFC.toLocaleString();
-  if (actEl) actEl.textContent = totalAct.toLocaleString();
-  if (pctEl) { pctEl.textContent = pct+'%'; pctEl.style.color = pct<50?'#E24B4A':pct<80?'#BA7517':'#1D9E75'; }
+  if (fcEl)  fcEl.textContent  = tPlan.toLocaleString();
+  if (cusEl) cusEl.textContent = tCustom.toLocaleString();
+  if (actEl) actEl.textContent = tAct.toLocaleString();
+  if (pctEl) { pctEl.textContent=pct+'%'; pctEl.style.color=pct<50?'#E24B4A':pct<80?'#BA7517':'#1D9E75'; }
 }
 
 function renderInventory() {
@@ -2791,6 +2882,7 @@ async function main() {
   await seedProjects();
   await seedProducts();
   await migrateProductBrands();
+  await loadCustomFC();
   startListeners();
   renderTab('overview');
 }
