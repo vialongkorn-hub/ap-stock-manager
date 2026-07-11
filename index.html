@@ -923,7 +923,7 @@ function renderOverview() {
     ${alertHtml}
     <div class="metrics">
       <div class="metric"><div class="metric-lbl"><i class="ti ti-building"></i> โครงการ</div><div class="metric-val">${totalProjects}</div><div class="metric-sub">${brands} Brands</div></div>
-      <div class="metric"><div class="metric-lbl"><i class="ti ti-home"></i> ยูนิตรวม</div><div class="metric-val">${totalUnits.toLocaleString()}</div><div class="metric-sub">ทุกโครงการ</div></div>
+      <div class="metric"><div class="metric-lbl"><i class="ti ti-home"></i> เหลือติดตั้ง</div><div class="metric-val">${totalUnits.toLocaleString()}</div><div class="metric-sub">ทุกโครงการ</div></div>
       <div class="metric"><div class="metric-lbl"><i class="ti ti-transfer-out"></i> เบิกวันนี้</div><div class="metric-val">${todayW}</div><div class="metric-sub">รายการ</div></div>
       <div class="metric"><div class="metric-lbl"><i class="ti ti-file-invoice"></i> PR เปิดอยู่</div><div class="metric-val" style="color:var(--red);">${openPR}</div><div class="metric-sub">รายการ</div></div>
     </div>
@@ -1708,7 +1708,7 @@ window.renderProjects = function renderProjects() {
     <div id="brand-level">
       <div class="card">
         <div class="card-hd"><i class="ti ti-building"></i> Brand Level — กดเพื่อดูโครงการ</div>
-        <table><thead><tr><th>Brand</th><th>โครงการ</th><th>ยูนิตรวม</th><th></th></tr></thead>
+        <table><thead><tr><th>Brand</th><th>โครงการ</th><th>เหลือติดตั้ง</th><th></th></tr></thead>
         <tbody>${rows}</tbody></table>
       </div>
       <div class="card edit-only" id="add-proj-card" style="opacity:0.35;pointer-events:none;">
@@ -2245,7 +2245,7 @@ function renderOverviewMobile() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         ${mbMetric('โครงการ',totalProjects)}
         ${mbMetric('PR เปิด',openPR,'#E24B4A')}
-        ${mbMetric('ยูนิตรวม',totalUnits.toLocaleString())}
+        ${mbMetric('เหลือติดตั้ง',totalUnits.toLocaleString())}
         ${mbMetric('เบิกวันนี้',todayW)}
       </div>
       ${mbCard('เบิกล่าสุด',`
