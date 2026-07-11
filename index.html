@@ -839,7 +839,7 @@ function renderOverview() {
   const totalProjects = projectsData.length;
   const totalUnits = projectsData.reduce((s,p)=>s+(p.totalUnit||0),0);
   const brands = new Set(projectsData.map(p=>p.brand)).size;
-  const critItems = PRODUCTS.filter(p => getStatus(p.id).cls === 'b-crit');
+  const critItems = productsData.filter(p => getStatus(p.id).cls === 'b-crit');
   const alertHtml = critItems.length ? `
     <div class="alert-banner">
       <i class="ti ti-alert-triangle" style="font-size:18px;color:#A32D2D;flex-shrink:0;"></i>
@@ -912,7 +912,7 @@ function renderOverview() {
   // ── AI Insight จากข้อมูลจริง ──
   const topBrand = Object.entries(brandSummary).sort((a,b)=>b[1].units-a[1].units)[0];
   const topBrandPct = topBrand ? Math.round(topBrand[1].units/totalUnits*100) : 0;
-  const critStock = PRODUCTS.filter(p=>getStatus(p.id).cls==='b-crit').map(p=>p.name);
+  const critStock = productsData.filter(p=>getStatus(p.id).cls==='b-crit').map(p=>p.name);
   const aiTxt = [
     topBrand ? `${BRAND_CFG[topBrand[0]]?.label||topBrand[0]} ครอง ${topBrandPct}% ของยูนิตทั้งหมด` : '',
     critStock.length ? `สต็อควิกฤต: ${critStock.join(', ')} — ควรเปิด PR ด่วน` : 'สต็อคทุกรายการอยู่ในเกณฑ์ดี',
@@ -1945,15 +1945,15 @@ window.saveProject = async function(docId, brandKey) {
   const fy     = parseFloat(document.getElementById('e-fy-'+docId)?.value)||0;
   const fq     = parseFloat(document.getElementById('e-fq-'+docId)?.value)||0;
   const fm     = parseFloat(document.getElementById('e-fm-'+docId)?.value)||0;
+  const drive  = document.getElementById('e-drive-'+docId)?.value.trim()||'';
   if (!name) { alert('กรุณากรอกชื่อโครงการ'); return; }
   await updateDoc(doc(db,'projects',docId), {
     name, segment:seg, totalUnit:unit, notStarted:ns,
     remainingInstall:ri, fcYear:fy, fcQuarter:fq, fcMonth:fm,
-    updatedAt:serverTimestamp()
+    driveLink:drive, updatedAt:serverTimestamp()
   });
-  // local cache update (Firebase listener จะ sync มาเองด้วย)
   const idx = projectsData.findIndex(x => x.docId === docId);
-  if (idx >= 0) Object.assign(projectsData[idx], {name, segment:seg, totalUnit:unit, notStarted:ns, remainingInstall:ri, fcYear:fy, fcQuarter:fq, fcMonth:fm});
+  if (idx >= 0) Object.assign(projectsData[idx], {name, segment:seg, totalUnit:unit, notStarted:ns, remainingInstall:ri, fcYear:fy, fcQuarter:fq, fcMonth:fm, driveLink:drive});
   cancelEditProject(docId, brandKey);
 };
 
@@ -2221,7 +2221,7 @@ function renderOverviewMobile() {
     const d=l.createdAt.toDate?l.createdAt.toDate():new Date();
     return d.toDateString()===new Date().toDateString();
   }).length;
-  const critItems = PRODUCTS.filter(p=>getStatus(p.id).cls==='b-crit');
+  const critItems = productsData.filter(p=>getStatus(p.id).cls==='b-crit');
   const alertHtml = critItems.length?`
     <div style="background:#FCEBEB;border-radius:10px;padding:10px 13px;display:flex;gap:9px;align-items:flex-start;margin-bottom:10px;">
       <i class="ti ti-alert-triangle" style="font-size:18px;color:#A32D2D;flex-shrink:0;margin-top:1px;" aria-hidden="true"></i>
