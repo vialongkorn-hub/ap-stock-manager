@@ -1656,7 +1656,7 @@ function renderForecast() {
 
   const totals = sorted.reduce((t,r)=>({count:t.count+r.count, remaining:t.remaining+r.remaining, fcYear:t.fcYear+r.fcYear, fcQuarter:t.fcQuarter+r.fcQuarter, fcMonth:t.fcMonth+r.fcMonth}), {count:0,remaining:0,fcYear:0,fcQuarter:0,fcMonth:0});
 
-  const SEG_LABEL = {1:'ราคาต่ำกว่า 3 ล้าน', 2:'ราคา 3-5 ล้าน', 3:'ราคา 5-10 ล้าน', 4:'ราคา 10 ล้านขึ้นไป'};
+  const SEG_LABEL = {1:'ยังไม่ขึ้นการก่อสร้าง', 2:'ขึ้นงานแล้วรอเปิดขาย', 3:'เปิดขายแล้วอยู่ระหว่างก่อสร้าง', 4:'End Product ครบแล้ว อยู่ระหว่างงานขาย'};
 
   const rows = sorted.map((r,i) => {
     const cfg = BRAND_CFG[r.brand]||{label:r.brand, badge:'b-ok'};
