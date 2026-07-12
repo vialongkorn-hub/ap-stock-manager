@@ -1663,8 +1663,9 @@ function renderForecast() {
   }).join('');
 
   document.getElementById('main-content').innerHTML = `
-    <div class="card" style="overflow-x:auto;">
+    <div class="card">
       <div class="card-hd"><i class="ti ti-chart-bar" style="color:var(--purple);"></i> สรุปตาม Segment</div>
+      <div style="overflow-y:auto;max-height:500px;">
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead>
           <tr style="background:var(--bg3);border-bottom:1px solid var(--border2);">
@@ -1687,6 +1688,7 @@ function renderForecast() {
           <td style="padding:10px 14px;text-align:right;font-weight:600;color:var(--purple);">${totals.fcMonth.toFixed(2)}</td>
         </tr></tfoot>
       </table>
+      </div>
     </div>
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
