@@ -1254,8 +1254,8 @@ window.editProductRow = function(id) {
   };
   const availBrands = Object.keys(BRAND_CFG).filter(k=>!currentBrands.includes(k));
   row.innerHTML = `
-    <td style="font-size:10px;color:var(--text3);">${p.code}</td>
-    <td><strong>${p.name}</strong></td>
+    <td><input class="form-input" id="ep-code-${id}" value="${p.code||''}" style="height:26px;font-size:11px;width:80px;"></td>
+    <td><input class="form-input" id="ep-name-${id}" value="${p.name||''}" style="height:26px;font-size:11px;min-width:140px;"></td>
     <td style="font-size:10px;">CIT</td>
     <td>
       <div id="brand-list-${id}">${currentBrands.map(k=>brandBadge(k)).join('')}</div>
@@ -1316,11 +1316,14 @@ window.removeBrandRow = function(id, k) {
 window.saveProduct = async function(id) {
   const p = productsData.find(x=>x.id===id);
   if (!p || !p.docId) return;
-  const list = document.getElementById('brand-list-'+id);
+  const code  = document.getElementById('ep-code-'+id)?.value.trim()||p.code;
+  const name  = document.getElementById('ep-name-'+id)?.value.trim()||p.name;
+  const list  = document.getElementById('brand-list-'+id);
   const brands = list?._brands || [];
-  const price  = parseInt(document.getElementById('ep-price-'+id)?.value)||0;
-  const min    = parseInt(document.getElementById('ep-min-'+id)?.value)||0;
-  await updateDoc(doc(db,'products',p.docId), {price, min, brands, brand:brands[0]||p.brand, updatedAt:serverTimestamp()});
+  const price = parseFloat(document.getElementById('ep-price-'+id)?.value)||0;
+  const min   = parseInt(document.getElementById('ep-min-'+id)?.value)||0;
+  if (!name) { alert('กรุณากรอกชื่อสินค้า'); return; }
+  await updateDoc(doc(db,'products',p.docId), {code, name, price, min, brands, brand:brands[0]||p.brand, updatedAt:serverTimestamp()});
 };
 
 window.deleteProduct = async function(id) {
