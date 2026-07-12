@@ -791,7 +791,7 @@ function renderTab(id) {
     }
   } else {
     switch(id) {
-      case 'overview': renderOverview(); setTimeout(initFCChart, 50); break;
+      case 'overview': renderOverview(); break;
       case 'inventory': renderInventory(); break;
       case 'withdraw': renderWithdraw(); break;
       case 'pr': renderPRTab(); break;
@@ -948,48 +948,7 @@ function renderOverview() {
         <div class="ai-box"><div class="ai-lbl"><i class="ti ti-sparkles"></i> AI Insight</div><div class="ai-txt">${aiTxt}</div></div>
       </div>
     </div>
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div class="card-hd" style="margin-bottom:0;"><i class="ti ti-trending-up"></i> Forecast vs เบิกจริง</div>
-        <div class="toggle-group">
-          <button class="toggle-btn active" id="fc-btn-month" onclick="switchFCView('month')">รายเดือน</button>
-          <button class="toggle-btn" id="fc-btn-quarter" onclick="switchFCView('quarter')">รายไตรมาส</button>
-          <button class="toggle-btn" id="fc-btn-product" onclick="switchFCView('product')">รายสินค้า</button>
-        </div>
-      </div>
-      <div style="display:flex;gap:12px;margin-bottom:10px;font-size:11px;color:var(--text2);">
-        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#534AB7;display:inline-block;"></span>FC แผน</span>
-        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#E24B4A;display:inline-block;"></span>FC ตั้งเอง</span>
-        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block;"></span>เบิกจริง</span>
-      </div>
-      <div style="position:relative;width:100%;height:240px;">
-        <canvas id="fc-chart" role="img" aria-label="กราฟ Forecast vs เบิกจริง"></canvas>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px;">
-        <div class="metric"><div class="metric-lbl" style="color:#534AB7;">FC แผน</div><div class="metric-val" id="fc-stat-fc" style="font-size:20px;color:#534AB7;">—</div></div>
-        <div class="metric"><div class="metric-lbl" style="color:#E24B4A;">FC ตั้งเอง</div><div class="metric-val" id="fc-stat-custom" style="font-size:20px;color:#E24B4A;">—</div></div>
-        <div class="metric"><div class="metric-lbl" style="color:#1D9E75;">เบิกจริง</div><div class="metric-val" id="fc-stat-act" style="font-size:20px;color:#1D9E75;">—</div></div>
-        <div class="metric"><div class="metric-lbl">ทำได้ vs FC ตั้งเอง</div><div class="metric-val" id="fc-stat-pct" style="font-size:20px;">—</div></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-hd"><i class="ti ti-settings" style="color:var(--purple);"></i> ตั้ง FC เอง</div>
-      <div id="fc-set-month">
-        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">จำนวนที่ต้องการสั่ง/เบิกต่อเดือน (ชิ้น)</div>
-        <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px;margin-bottom:12px;" id="fc-month-inputs"></div>
-        <button class="tb-btn primary" onclick="saveCustomFC('month')"><i class="ti ti-device-floppy"></i> บันทึก FC</button>
-      </div>
-      <div id="fc-set-quarter" style="display:none;">
-        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">จำนวนที่ต้องการสั่ง/เบิกต่อไตรมาส (ชิ้น)</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;" id="fc-quarter-inputs"></div>
-        <button class="tb-btn primary" onclick="saveCustomFC('quarter')"><i class="ti ti-device-floppy"></i> บันทึก FC</button>
-      </div>
-      <div id="fc-set-product" style="display:none;">
-        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">จำนวนที่ต้องการสั่ง/เบิกต่อสินค้า (ชิ้น/ปี)</div>
-        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;" id="fc-product-inputs"></div>
-        <button class="tb-btn primary" onclick="saveCustomFC('product')"><i class="ti ti-device-floppy"></i> บันทึก FC</button>
-      </div>
-    </div>`;
+    `;
 }
 window.switchPeriod = function(p) { currentPeriod = p; renderTab('overview'); setTimeout(initFCChart, 50); };
 
@@ -1655,17 +1614,95 @@ window.updatePR = async function(docId, newStatus) {
 };
 
 function renderForecast() {
+  // สรุปตาม Brand × Segment จาก projectsData จริง
+  const summary = {};
+  projectsData.forEach(p => {
+    const key = `${p.brand}__${p.segment||0}`;
+    if (!summary[key]) summary[key] = {brand:p.brand, segment:p.segment||0, count:0, remaining:0, fcYear:0, fcQuarter:0, fcMonth:0};
+    summary[key].count++;
+    summary[key].remaining += p.remainingInstall||0;
+    summary[key].fcYear    += p.fcYear||0;
+    summary[key].fcQuarter += p.fcQuarter||0;
+    summary[key].fcMonth   += p.fcMonth||0;
+  });
+
+  const sorted = Object.values(summary).sort((a,b)=>{
+    const bi = Object.keys(BRAND_CFG).indexOf(a.brand) - Object.keys(BRAND_CFG).indexOf(b.brand);
+    return bi !== 0 ? bi : b.segment - a.segment;
+  });
+
+  const totals = sorted.reduce((t,r)=>({count:t.count+r.count, remaining:t.remaining+r.remaining, fcYear:t.fcYear+r.fcYear, fcQuarter:t.fcQuarter+r.fcQuarter, fcMonth:t.fcMonth+r.fcMonth}), {count:0,remaining:0,fcYear:0,fcQuarter:0,fcMonth:0});
+
+  const rows = sorted.map(r => {
+    const cfg = BRAND_CFG[r.brand]||{label:r.brand, badge:'b-ok'};
+    return `<tr>
+      <td><span class="badge ${cfg.badge}" style="font-size:10px;">${cfg.label}</span></td>
+      <td style="text-align:center;">${r.segment}</td>
+      <td style="text-align:right;">${r.count}</td>
+      <td style="text-align:right;">${r.remaining.toLocaleString()}</td>
+      <td style="text-align:right;font-weight:500;">${r.fcYear.toFixed(2)}</td>
+      <td style="text-align:right;">${r.fcQuarter.toFixed(2)}</td>
+      <td style="text-align:right;">${r.fcMonth.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+
   document.getElementById('main-content').innerHTML = `
-    <div class="ai-box"><div class="ai-lbl"><i class="ti ti-sparkles"></i> AI Forecast Summary — BG2 ปี 2026</div>
-    <div class="ai-txt">Pleno/Town ครอง 65% ของ demand · Grande Pleno ควรเสนอ Aqara A100 กับลูกค้า iPhone · Apitown กระจาย 12 จังหวัด ควรสต็อค A2 ล่วงหน้า 1 ไตรมาส</div></div>
-    <div class="three-col">
-      <div class="card"><div class="card-hd" style="color:#185FA5;"><i class="ti ti-building"></i> Pleno / Town</div><div style="font-size:11px;line-height:1.9;"><strong>Y02-Knob / Handle</strong><br><span style="color:var(--text2);">72 โครงการ · 18,420 ยูนิต</span><br><span style="color:#185FA5;font-weight:600;">FC/ปี 4,605 · /Q 1,151</span></div></div>
-      <div class="card"><div class="card-hd" style="color:#534AB7;"><i class="ti ti-building"></i> Grande Pleno</div><div style="font-size:11px;line-height:1.9;"><strong>J03 / Aqara A100</strong><br><span style="color:var(--text2);">28 โครงการ · 4,821 ยูนิต</span><br><span style="color:#534AB7;font-weight:600;">FC/ปี 1,205 · /Q 301</span></div></div>
-      <div class="card"><div class="card-hd" style="color:#0F6E56;"><i class="ti ti-building"></i> BKM / Edition</div><div style="font-size:11px;line-height:1.9;"><strong>A2 / J03 / Aqara</strong><br><span style="color:var(--text2);">36 โครงการ · 5,065 ยูนิต</span><br><span style="color:#0F6E56;font-weight:600;">FC/ปี 1,266 · /Q 317</span></div></div>
-      <div class="card"><div class="card-hd" style="color:#3B6D11;"><i class="ti ti-building"></i> Apitown</div><div style="font-size:11px;line-height:1.9;"><strong>A2-Handle / P60 / Esther</strong><br><span style="color:var(--text2);">12 โครงการ · 2,961 ยูนิต</span><br><span style="color:#3B6D11;font-weight:600;">FC/ปี 740 · /Q 185</span></div></div>
-      <div class="card"><div class="card-hd" style="color:#633806;"><i class="ti ti-building"></i> BKM Classe</div><div style="font-size:11px;line-height:1.9;"><strong>J03 / Aqara A100</strong><br><span style="color:var(--text2);">3 โครงการ · 138 ยูนิต</span><br><span style="color:#633806;font-weight:600;">FC/ปี 35 · /Q 9</span></div></div>
-      <div class="card"><div class="card-hd" style="color:#444441;"><i class="ti ti-building"></i> District</div><div style="font-size:11px;line-height:1.9;"><strong>Kudos J03 Pro</strong><br><span style="color:var(--text2);">2 โครงการ · 36 ยูนิต</span><br><span style="color:#444441;font-weight:600;">FC/ปี 9 · /Q 2</span></div></div>
+    <div class="card" style="overflow-x:auto;">
+      <div class="card-hd"><i class="ti ti-chart-bar" style="color:var(--purple);"></i> สรุปตาม Segment</div>
+      <table><thead><tr><th>Brand</th><th>Seg</th><th>โครงการ</th><th>เหลือติดตั้ง</th><th>FC/ปี</th><th>FC/Q</th><th>FC/เดือน</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr style="border-top:1px solid var(--border2);">
+        <td colspan="2" style="font-weight:600;padding:8px 10px;">รวมทั้งหมด</td>
+        <td style="text-align:right;font-weight:600;">${totals.count}</td>
+        <td style="text-align:right;font-weight:600;">${totals.remaining.toLocaleString()}</td>
+        <td style="text-align:right;font-weight:600;color:var(--purple);">${totals.fcYear.toFixed(2)}</td>
+        <td style="text-align:right;font-weight:600;color:var(--purple);">${totals.fcQuarter.toFixed(2)}</td>
+        <td style="text-align:right;font-weight:600;color:var(--purple);">${totals.fcMonth.toFixed(2)}</td>
+      </tr></tfoot></table>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="card-hd" style="margin-bottom:0;"><i class="ti ti-trending-up"></i> Forecast vs เบิกจริง</div>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="fc-btn-month" onclick="switchFCView('month')">รายเดือน</button>
+          <button class="toggle-btn" id="fc-btn-quarter" onclick="switchFCView('quarter')">รายไตรมาส</button>
+          <button class="toggle-btn" id="fc-btn-product" onclick="switchFCView('product')">รายสินค้า</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:10px;font-size:11px;color:var(--text2);">
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#534AB7;display:inline-block;"></span>FC แผน</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#E24B4A;display:inline-block;"></span>FC ตั้งเอง</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block;"></span>เบิกจริง</span>
+      </div>
+      <div style="position:relative;width:100%;height:240px;">
+        <canvas id="fc-chart" role="img" aria-label="กราฟ Forecast vs เบิกจริง"></canvas>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px;">
+        <div class="metric"><div class="metric-lbl" style="color:#534AB7;">FC แผน</div><div class="metric-val" id="fc-stat-fc" style="font-size:20px;color:#534AB7;">—</div></div>
+        <div class="metric"><div class="metric-lbl" style="color:#E24B4A;">FC ตั้งเอง</div><div class="metric-val" id="fc-stat-custom" style="font-size:20px;color:#E24B4A;">—</div></div>
+        <div class="metric"><div class="metric-lbl" style="color:#1D9E75;">เบิกจริง</div><div class="metric-val" id="fc-stat-act" style="font-size:20px;color:#1D9E75;">—</div></div>
+        <div class="metric"><div class="metric-lbl">ทำได้ vs FC ตั้งเอง</div><div class="metric-val" id="fc-stat-pct" style="font-size:20px;">—</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><i class="ti ti-settings" style="color:var(--purple);"></i> ตั้ง FC เอง</div>
+      <div id="fc-set-month">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">จำนวนที่ต้องการสั่ง/เบิกต่อเดือน (ชิ้น)</div>
+        <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px;margin-bottom:12px;" id="fc-month-inputs"></div>
+        <button class="tb-btn primary" onclick="saveCustomFC('month')"><i class="ti ti-device-floppy"></i> บันทึก FC</button>
+      </div>
+      <div id="fc-set-quarter" style="display:none;">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">จำนวนที่ต้องการสั่ง/เบิกต่อไตรมาส (ชิ้น)</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;" id="fc-quarter-inputs"></div>
+        <button class="tb-btn primary" onclick="saveCustomFC('quarter')"><i class="ti ti-device-floppy"></i> บันทึก FC</button>
+      </div>
+      <div id="fc-set-product" style="display:none;">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">จำนวนที่ต้องการสั่ง/เบิกต่อสินค้า (ชิ้น/ปี)</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;" id="fc-product-inputs"></div>
+        <button class="tb-btn primary" onclick="saveCustomFC('product')"><i class="ti ti-device-floppy"></i> บันทึก FC</button>
+      </div>
     </div>`;
+  setTimeout(initFCChart, 50);
 }
 
 // ── BRAND CONFIG (metadata only — project data comes from Firebase) ──
@@ -2135,27 +2172,34 @@ window.deleteProject = async function(docId, brandKey) {
 };
 
 function renderSpec() {
+  // groupสินค้าตาม brand
+  const brandGroups = {};
+  Object.keys(BRAND_CFG).forEach(b => { brandGroups[b] = []; });
+  productsData.forEach(p => {
+    (p.brands||[p.brand]).forEach(b => {
+      if (brandGroups[b]) brandGroups[b].push(p);
+    });
+  });
+
+  const rows = Object.entries(BRAND_CFG).map(([b, cfg]) => {
+    const items = brandGroups[b]||[];
+    if (!items.length) return '';
+    return items.map((p, i) => `
+      <tr>
+        ${i===0 ? `<td rowspan="${items.length}"><span class="badge ${cfg.badge}">${cfg.label}</span></td>` : ''}
+        <td style="font-size:11px;color:var(--text2);">${p.code}</td>
+        <td>${p.name}</td>
+        <td>${p.price ? p.price.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</td>
+        <td>CIT</td>
+      </tr>`).join('');
+  }).join('');
+
   document.getElementById('main-content').innerHTML = `
     <div class="card">
       <div class="card-hd"><i class="ti ti-file-description"></i> สเปคสินค้า — BG2 REV.1 · 2026–2027</div>
-      <table><thead><tr><th>Brand</th><th>ประเภท</th><th>สินค้า</th><th>ราคา ex VAT</th><th>Vendor</th></tr></thead>
-      <tbody>
-        <tr><td rowspan="2"><span class="badge b-pleno">Pleno/Town</span></td><td>UPVC Knob</td><td>Kudos Y02-Knob</td><td>3,750</td><td>CIT</td></tr>
-        <tr><td>Handle</td><td>Kudos Y02-Handle</td><td>3,750</td><td>CIT</td></tr>
-        <tr><td rowspan="3"><span class="badge b-grande">Grande Pleno</span></td><td>TWH/TH UPVC</td><td>Kudos J03 No-Camera</td><td>5,234</td><td>CIT</td></tr>
-        <tr><td>Outdoor</td><td>Kudos P60</td><td>4,060</td><td>CIT</td></tr>
-        <tr><td>All Type (Apple)</td><td>Aqara A100</td><td>4,500–8,500</td><td>CIT</td></tr>
-        <tr><td rowspan="3"><span class="badge b-bkm">BKM</span></td><td>Handle</td><td>Kudos A2-Handle</td><td>4,650</td><td>CIT</td></tr>
-        <tr><td>UPVC Knob</td><td>Kudos A2-Knob</td><td>4,650</td><td>CIT</td></tr>
-        <tr><td>Outdoor</td><td>Kudos P60</td><td>4,060</td><td>CIT</td></tr>
-        <tr><td rowspan="2"><span class="badge b-bkme">BKM Edition</span></td><td>UPVC</td><td>Kudos J03 No-Camera</td><td>5,234</td><td>CIT</td></tr>
-        <tr><td>All Type (Apple)</td><td>Aqara A100</td><td>4,500–8,500</td><td>CIT</td></tr>
-        <tr><td rowspan="2"><span class="badge b-bkmc">BKM Classe</span></td><td>UPVC</td><td>Kudos J03 No-Camera</td><td>5,234</td><td>CIT</td></tr>
-        <tr><td>All Type (Apple)</td><td>Aqara A100</td><td>4,500–8,500</td><td>CIT</td></tr>
-        <tr><td rowspan="2"><span class="badge b-api">Apitown</span></td><td>Handle/Knob</td><td>Kudos A2-Handle / A2-Knob</td><td>4,650</td><td>CIT</td></tr>
-        <tr><td>UPVC + Dummy</td><td>Esther EAE-08</td><td>8,900</td><td>CIT</td></tr>
-        <tr><td><span class="badge b-dist">District</span></td><td>UPVC</td><td>Kudos J03 Pro</td><td>—</td><td>CIT</td></tr>
-      </tbody></table>
+      <table><thead><tr><th>Brand</th><th>รหัส</th><th>สินค้า</th><th>ราคา ex VAT</th><th>Vendor</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      <div style="font-size:11px;color:var(--text3);margin-top:10px;">* ข้อมูลดึงจากสินค้าคงคลัง — แก้ไขได้ที่หน้าสินค้าคงคลัง</div>
     </div>`;
 }
 
