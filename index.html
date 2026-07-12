@@ -1656,11 +1656,13 @@ function renderForecast() {
 
   const totals = sorted.reduce((t,r)=>({count:t.count+r.count, remaining:t.remaining+r.remaining, fcYear:t.fcYear+r.fcYear, fcQuarter:t.fcQuarter+r.fcQuarter, fcMonth:t.fcMonth+r.fcMonth}), {count:0,remaining:0,fcYear:0,fcQuarter:0,fcMonth:0});
 
+  const SEG_LABEL = {1:'ราคาต่ำกว่า 3 ล้าน', 2:'ราคา 3-5 ล้าน', 3:'ราคา 5-10 ล้าน', 4:'ราคา 10 ล้านขึ้นไป'};
+
   const rows = sorted.map((r,i) => {
     const cfg = BRAND_CFG[r.brand]||{label:r.brand, badge:'b-ok'};
     return `<tr style="border-bottom:0.5px solid var(--border);${i%2===1?'background:var(--bg3);':''}">
       <td style="padding:10px 14px !important;"><span class="badge ${cfg.badge}" style="font-size:11px;white-space:nowrap;">${cfg.label}</span></td>
-      <td style="padding:10px 14px !important;text-align:center;color:var(--text2);">${r.segment}</td>
+      <td style="padding:10px 14px !important;color:var(--text2);white-space:nowrap;">${SEG_LABEL[r.segment]||r.segment}</td>
       <td style="padding:10px 14px !important;text-align:right;">${r.count}</td>
       <td style="padding:10px 14px !important;text-align:right;">${r.remaining.toLocaleString()}</td>
       <td style="padding:10px 14px !important;text-align:right;font-weight:500;">${r.fcYear.toFixed(2)}</td>
