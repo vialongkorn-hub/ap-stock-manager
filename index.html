@@ -1665,7 +1665,15 @@ function renderForecast() {
   document.getElementById('main-content').innerHTML = `
     <div class="card" style="overflow-x:auto;">
       <div class="card-hd"><i class="ti ti-chart-bar" style="color:var(--purple);"></i> สรุปตาม Segment</div>
-      <table><thead><tr><th>Brand</th><th>Seg</th><th>โครงการ</th><th>เหลือติดตั้ง</th><th>FC/ปี</th><th>FC/Q</th><th>FC/เดือน</th></tr></thead>
+      <table style="min-width:600px;"><thead><tr>
+        <th style="min-width:140px;">Brand</th>
+        <th style="min-width:60px;text-align:center;">Seg</th>
+        <th style="min-width:80px;text-align:right;">โครงการ</th>
+        <th style="min-width:120px;text-align:right;">เหลือติดตั้ง</th>
+        <th style="min-width:100px;text-align:right;">FC/ปี</th>
+        <th style="min-width:100px;text-align:right;">FC/Q</th>
+        <th style="min-width:100px;text-align:right;">FC/เดือน</th>
+      </tr></thead>
       <tbody>${rows}</tbody>
       <tfoot><tr style="border-top:1px solid var(--border2);">
         <td colspan="2" style="font-weight:600;padding:8px 10px;">รวมทั้งหมด</td>
