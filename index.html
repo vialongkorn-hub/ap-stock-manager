@@ -747,6 +747,7 @@ function startListeners() {
     if (currentTab === 'withdraw') renderTab('withdraw');
     if (currentTab === 'pr') renderTab('pr');
     if (currentTab === 'overview') renderTab('overview');
+    if (currentTab === 'forecast') renderTab('forecast');
   });
   onSnapshot(collection(db, 'stock'), snap => {
     snap.forEach(d => { stockData[d.data().productId] = {docId:d.id, qty:d.data().qty}; });
@@ -826,6 +827,8 @@ function renderPRBadge() {
 
 window.goTabMobile = function(id) {
   currentTab = id;
+  document.querySelectorAll('.bn-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.bn-item[data-tab="${id}"]`)?.classList.add('active');
   renderTab(id);
 };
 
