@@ -1649,40 +1649,44 @@ function renderForecast() {
 
   const totals = sorted.reduce((t,r)=>({count:t.count+r.count, remaining:t.remaining+r.remaining, fcYear:t.fcYear+r.fcYear, fcQuarter:t.fcQuarter+r.fcQuarter, fcMonth:t.fcMonth+r.fcMonth}), {count:0,remaining:0,fcYear:0,fcQuarter:0,fcMonth:0});
 
-  const rows = sorted.map(r => {
+  const rows = sorted.map((r,i) => {
     const cfg = BRAND_CFG[r.brand]||{label:r.brand, badge:'b-ok'};
-    return `<tr>
-      <td><span class="badge ${cfg.badge}" style="font-size:10px;">${cfg.label}</span></td>
-      <td style="text-align:center;">${r.segment}</td>
-      <td style="text-align:right;">${r.count}</td>
-      <td style="text-align:right;">${r.remaining.toLocaleString()}</td>
-      <td style="text-align:right;font-weight:500;">${r.fcYear.toFixed(2)}</td>
-      <td style="text-align:right;">${r.fcQuarter.toFixed(2)}</td>
-      <td style="text-align:right;">${r.fcMonth.toFixed(2)}</td>
+    return `<tr style="border-bottom:0.5px solid var(--border);${i%2===1?'background:var(--bg3);':''}">
+      <td style="padding:10px 14px;"><span class="badge ${cfg.badge}" style="font-size:11px;white-space:nowrap;">${cfg.label}</span></td>
+      <td style="padding:10px 14px;text-align:center;color:var(--text2);">${r.segment}</td>
+      <td style="padding:10px 14px;text-align:right;">${r.count}</td>
+      <td style="padding:10px 14px;text-align:right;">${r.remaining.toLocaleString()}</td>
+      <td style="padding:10px 14px;text-align:right;font-weight:500;">${r.fcYear.toFixed(2)}</td>
+      <td style="padding:10px 14px;text-align:right;color:var(--text2);">${r.fcQuarter.toFixed(2)}</td>
+      <td style="padding:10px 14px;text-align:right;color:var(--text2);">${r.fcMonth.toFixed(2)}</td>
     </tr>`;
   }).join('');
 
   document.getElementById('main-content').innerHTML = `
     <div class="card" style="overflow-x:auto;">
       <div class="card-hd"><i class="ti ti-chart-bar" style="color:var(--purple);"></i> สรุปตาม Segment</div>
-      <table style="min-width:700px;width:auto;table-layout:auto;"><thead><tr>
-        <th style="min-width:160px;">Brand</th>
-        <th style="min-width:60px;text-align:center;">Seg</th>
-        <th style="min-width:80px;text-align:right;">โครงการ</th>
-        <th style="min-width:130px;text-align:right;">เหลือติดตั้ง</th>
-        <th style="min-width:110px;text-align:right;">FC/ปี</th>
-        <th style="min-width:110px;text-align:right;">FC/Q</th>
-        <th style="min-width:110px;text-align:right;">FC/เดือน</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-      <tfoot><tr style="border-top:1px solid var(--border2);">
-        <td colspan="2" style="font-weight:600;padding:8px 10px;">รวมทั้งหมด</td>
-        <td style="text-align:right;font-weight:600;">${totals.count}</td>
-        <td style="text-align:right;font-weight:600;">${totals.remaining.toLocaleString()}</td>
-        <td style="text-align:right;font-weight:600;color:var(--purple);">${totals.fcYear.toFixed(2)}</td>
-        <td style="text-align:right;font-weight:600;color:var(--purple);">${totals.fcQuarter.toFixed(2)}</td>
-        <td style="text-align:right;font-weight:600;color:var(--purple);">${totals.fcMonth.toFixed(2)}</td>
-      </tr></tfoot></table>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:var(--bg3);border-bottom:1px solid var(--border2);">
+            <th style="padding:8px 14px;text-align:left;font-weight:500;color:var(--text2);white-space:nowrap;">Brand</th>
+            <th style="padding:8px 14px;text-align:center;font-weight:500;color:var(--text2);">Seg</th>
+            <th style="padding:8px 14px;text-align:right;font-weight:500;color:var(--text2);">โครงการ</th>
+            <th style="padding:8px 14px;text-align:right;font-weight:500;color:var(--text2);white-space:nowrap;">เหลือติดตั้ง</th>
+            <th style="padding:8px 14px;text-align:right;font-weight:500;color:var(--text2);">FC/ปี</th>
+            <th style="padding:8px 14px;text-align:right;font-weight:500;color:var(--text2);">FC/Q</th>
+            <th style="padding:8px 14px;text-align:right;font-weight:500;color:var(--text2);white-space:nowrap;">FC/เดือน</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr style="border-top:1.5px solid var(--border2);background:var(--bg3);">
+          <td colspan="2" style="padding:10px 14px;font-weight:600;">รวมทั้งหมด</td>
+          <td style="padding:10px 14px;text-align:right;font-weight:600;">${totals.count}</td>
+          <td style="padding:10px 14px;text-align:right;font-weight:600;">${totals.remaining.toLocaleString()}</td>
+          <td style="padding:10px 14px;text-align:right;font-weight:600;color:var(--purple);">${totals.fcYear.toFixed(2)}</td>
+          <td style="padding:10px 14px;text-align:right;font-weight:600;color:var(--purple);">${totals.fcQuarter.toFixed(2)}</td>
+          <td style="padding:10px 14px;text-align:right;font-weight:600;color:var(--purple);">${totals.fcMonth.toFixed(2)}</td>
+        </tr></tfoot>
+      </table>
     </div>
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
