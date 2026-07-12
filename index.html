@@ -853,7 +853,10 @@ function renderOverview() {
     return d.toDateString() === new Date().toDateString();
   }).length;
   const totalProjects = projectsData.length;
-  const totalUnits = projectsData.reduce((s,p)=>s+(p.totalUnit||0),0);
+  const totalUnits = projectsData.reduce((s,p) => {
+    const withdrawn = withdrawLog.filter(l=>l.projectId===p.plantId).reduce((a,l)=>a+(l.qty||0),0);
+    return s + Math.max(0,(p.remainingInstall||0)-withdrawn);
+  }, 0);
   const brands = new Set(projectsData.map(p=>p.brand)).size;
   const critItems = productsData.filter(p => getStatus(p.id).cls === 'b-crit');
   const alertHtml = critItems.length ? `
@@ -915,7 +918,7 @@ function renderOverview() {
     const b = p.brand;
     if (!brandSummary[b]) brandSummary[b] = {count:0, units:0, fc:0};
     brandSummary[b].count++;
-    brandSummary[b].units += p.totalUnit||0;
+    brandSummary[b].units += p.remainingInstall||0;
     brandSummary[b].fc += p.fcYear||0;
   });
   const brandRows = Object.entries(BRAND_CFG).filter(([k])=>brandSummary[k]).map(([k,d])=>`
@@ -956,7 +959,7 @@ function renderOverview() {
     <div class="two-col">
       <div class="card">
         <div class="card-hd"><i class="ti ti-building"></i> สรุปตาม Brand</div>
-        <table><thead><tr><th>Brand</th><th>โครงการ</th><th>ยูนิต</th><th>FC/ปี</th><th>Door Lock</th></tr></thead>
+        <table><thead><tr><th>Brand</th><th>โครงการ</th><th>เหลือติดตั้ง</th><th>FC/ปี</th><th>Door Lock</th></tr></thead>
         <tbody>${brandRows}</tbody></table>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;">
