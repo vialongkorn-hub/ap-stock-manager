@@ -825,6 +825,19 @@ function renderPRBadge() {
   if (isMobile() && currentTab === 'overview') renderOverviewMobile();
 }
 
+window.switchToTab = function(id) {
+  currentTab = id;
+  if (isMobile()) {
+    document.querySelectorAll('.bn-item').forEach(el => el.classList.remove('active'));
+    document.querySelector(`.bn-item[data-tab="${id}"]`)?.classList.add('active');
+  } else {
+    document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
+    document.querySelector(`.sb-item[data-tab="${id}"]`)?.classList.add('active');
+    document.getElementById('page-title').textContent = TAB_TITLES[id]||id;
+  }
+  renderTab(id);
+};
+
 window.goTabMobile = function(id) {
   currentTab = id;
   document.querySelectorAll('.bn-item').forEach(el => el.classList.remove('active'));
@@ -847,7 +860,7 @@ function renderOverview() {
     <div class="alert-banner">
       <i class="ti ti-alert-triangle" style="font-size:18px;color:#A32D2D;flex-shrink:0;"></i>
       <div style="flex:1;font-size:11px;color:#791F1F;"><strong>สต็อควิกฤต ${critItems.length} รายการ:</strong> ${critItems.map(p=>p.name).join(' · ')}</div>
-      <button onclick="isMobile()?goTabMobile('pr'):goTab('pr',null)" style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid #F09595;background:#fff;color:#A32D2D;cursor:pointer;">ดู PR →</button>
+      <button onclick="switchToTab('pr')" style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid #F09595;background:#fff;color:#A32D2D;cursor:pointer;">ดู PR →</button>
     </div>` : '';
   const recentLog = withdrawLog.slice(0,3).map(l => `
     <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px;">
