@@ -918,7 +918,8 @@ function renderOverview() {
     const b = p.brand;
     if (!brandSummary[b]) brandSummary[b] = {count:0, units:0, fc:0};
     brandSummary[b].count++;
-    brandSummary[b].units += p.remainingInstall||0;
+    const withdrawn = withdrawLog.filter(l=>l.projectId===p.plantId).reduce((a,l)=>a+(l.qty||0),0);
+    brandSummary[b].units += Math.max(0,(p.remainingInstall||0)-withdrawn);
     brandSummary[b].fc += p.fcYear||0;
   });
   const brandRows = Object.entries(BRAND_CFG).filter(([k])=>brandSummary[k]).map(([k,d])=>`
