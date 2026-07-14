@@ -1069,11 +1069,11 @@ function initFCChart() {
 
   const now = new Date();
   const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-  const monthLabels = Array.from({length:6},(_,i)=>{ const d=new Date(now.getFullYear(),now.getMonth()-(5-i),1); return MONTHS_TH[d.getMonth()]; });
+  const monthLabels = MONTHS_TH;
   const totalFCMonth = projectsData.reduce((s,p)=>s+(p.fcMonth||0),0);
   const fcMonthData = monthLabels.map(()=>Math.round(totalFCMonth));
-  const actMonthData = Array.from({length:6},(_,i)=>{
-    const d=new Date(now.getFullYear(),now.getMonth()-(5-i),1);
+  const actMonthData = Array.from({length:12},(_,i)=>{
+    const d=new Date(now.getFullYear(),i,1);
     return withdrawLog.filter(l=>{ if(!l.createdAt) return false; const ld=l.createdAt.toDate?l.createdAt.toDate():new Date(l.createdAt); return ld.getFullYear()===d.getFullYear()&&ld.getMonth()===d.getMonth(); }).reduce((s,l)=>s+(l.qty||0),0);
   });
 
@@ -1103,9 +1103,12 @@ function initFCChart() {
       ]
     },
     options:{
-      responsive:true,maintainAspectRatio:false,
+      responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}},
-      scales:{x:{grid:{display:false},ticks:{font:{size:11},maxRotation:45}},y:{grid:{color:'#e1e0d9'},ticks:{font:{size:11}},beginAtZero:true}}
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11},maxRotation:0}},
+        y:{grid:{color:'#e1e0d9'},ticks:{font:{size:11}},beginAtZero:true}
+      }
     }
   });
   updateFCStats('month', customData);
@@ -1119,6 +1122,13 @@ window.switchFCView = function(v) {
     const sec = document.getElementById('fc-set-'+id);
     if (sec) sec.style.display = v===id?'':'none';
   });
+  // ปรับความกว้างตาม view
+  const wrap = document.getElementById('fc-chart-wrap');
+  if (wrap) {
+    if (v==='quarter') wrap.style.minWidth = '100%';
+    else if (v==='month') wrap.style.minWidth = '800px';
+    else wrap.style.minWidth = Math.max(600, productsData.length * 80) + 'px';
+  }
   if (!fcChart||!window._fcViews) return;
   const d = window._fcViews[v];
   const custom = getCustomFCValues(v);
@@ -1713,8 +1723,10 @@ function renderForecast() {
         <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#E24B4A;display:inline-block;"></span>FC ตั้งเอง</span>
         <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block;"></span>เบิกจริง</span>
       </div>
-      <div style="position:relative;width:100%;height:240px;">
-        <canvas id="fc-chart" role="img" aria-label="กราฟ Forecast vs เบิกจริง"></canvas>
+      <div style="overflow-x:auto;" id="fc-chart-scroll">
+        <div id="fc-chart-wrap" style="min-width:800px;position:relative;height:240px;">
+          <canvas id="fc-chart" role="img" aria-label="กราฟ Forecast vs เบิกจริง"></canvas>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px;">
         <div class="metric"><div class="metric-lbl" style="color:#534AB7;">FC แผน</div><div class="metric-val" id="fc-stat-fc" style="font-size:20px;color:#534AB7;">—</div></div>
