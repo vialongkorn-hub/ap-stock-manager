@@ -1048,13 +1048,10 @@ window.updateFCChartLive = function() {
 };
 
 function getCustomFCValues(v) {
-  const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   if (v==='month') {
-    const now = new Date();
-    return Array.from({length:6},(_,i)=>{
-      const monthIdx = (now.getMonth()-(5-i)+12)%12;
-      const el = document.getElementById('fc-m-'+monthIdx);
-      return el ? parseInt(el.value)||0 : customFCData.month[monthIdx]||0;
+    return Array.from({length:12},(_,i)=>{
+      const el = document.getElementById('fc-m-'+i);
+      return el ? parseInt(el.value)||0 : customFCData.month[i]||0;
     });
   }
   if (v==='quarter') return [0,1,2,3].map(i=>{ const el=document.getElementById('fc-q-'+i); return el?parseInt(el.value)||0:customFCData.quarter[i]||0; });
@@ -1131,7 +1128,15 @@ window.switchFCView = function(v) {
     const sec = document.getElementById('fc-set-'+id);
     if (sec) sec.style.display = v===id?'':'none';
   });
-  // auto-resize chart based on data density
+  if (!fcChart||!window._fcViews) return;
+  const d = window._fcViews[v];
+  const custom = getCustomFCValues(v);
+  // update data ก่อน resize
+  fcChart.data.labels = d.labels;
+  fcChart.data.datasets[0].data = d.plan;
+  fcChart.data.datasets[1].data = custom;
+  fcChart.data.datasets[2].data = d.act;
+  // auto-resize
   const BAR_MIN_WIDTH = 80;
   const scroll = document.getElementById('fc-chart-scroll');
   const wrap = document.getElementById('fc-chart-wrap');
@@ -1139,14 +1144,7 @@ window.switchFCView = function(v) {
   const neededW = d.labels.length * BAR_MIN_WIDTH;
   const finalW = Math.max(containerW, neededW);
   if (wrap) wrap.style.width = finalW + 'px';
-  if (fcChart) fcChart.resize(finalW, 240);
-  if (!fcChart||!window._fcViews) return;
-  const d = window._fcViews[v];
-  const custom = getCustomFCValues(v);
-  fcChart.data.labels = d.labels;
-  fcChart.data.datasets[0].data = d.plan;
-  fcChart.data.datasets[1].data = custom;
-  fcChart.data.datasets[2].data = d.act;
+  fcChart.resize(finalW, 240);
   fcChart.update();
   updateFCStats(v, custom);
 };
