@@ -1067,8 +1067,8 @@ function initFCChart() {
   const now = new Date();
   const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   const monthLabels = MONTHS_TH;
-  const totalFCMonth = projectsData.reduce((s,p)=>s+(p.fcMonth||0),0);
-  const fcMonthData = monthLabels.map(()=>Math.round(totalFCMonth));
+  const totalFCYear = projectsData.reduce((s,p)=>s+(p.fcYear||0),0);
+  const fcMonthData = Array.from({length:12},()=>Math.round(totalFCYear/12));
   const actMonthData = Array.from({length:12},(_,i)=>{
     const d=new Date(now.getFullYear(),i,1);
     return withdrawLog.filter(l=>{ if(!l.createdAt) return false; const ld=l.createdAt.toDate?l.createdAt.toDate():new Date(l.createdAt); return ld.getFullYear()===d.getFullYear()&&ld.getMonth()===d.getMonth(); }).reduce((s,l)=>s+(l.qty||0),0);
